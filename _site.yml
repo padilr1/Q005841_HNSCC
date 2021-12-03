@@ -1,7 +1,7 @@
 name: ""
 navbar:
-  title: "Q005841"
+  title: "HNSCC"
   left:
-    - text: "HNSCC"
+    - text: "Q005841"
       href: index.html
 output_dir: "docs"

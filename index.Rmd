@@ -40,6 +40,7 @@ load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
 ## All samples
 ```{r echo = FALSE, warning=FALSE,message=FALSE}
 rv <- rowVars(assay(rld))
+colnames(rld) <- gsub(pattern = "_2.19.*",replacement = "",colnames(rld))
 select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
 pc <- prcomp(t(assay(rld)[select,]))
 condition <- cdat_hnscc_final$condition
@@ -143,6 +144,41 @@ select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
 heatmaply_cor(
   cor(assay(rld.fadu.skn3[select,])),showticklabels = FALSE,key.title = "",row_dend_left = TRUE,dend_hoverinfo = FALSE
 )
+```
+
+## {-}
+
+# Hierarchical clustering (top 500 most variably expressed genes) {.tabset .tabset-pills}
+## All samples
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+gplots::heatmap.2(assay(rld)[select,], margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8)
+#heatmaply(assay(rld)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
+```
+
+## Cal27
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld.cal27))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+gplots::heatmap.2(assay(rld.cal27)[select,],  margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8)
+#heatmaply(assay(rld)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
+```
+
+## Detroit
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld.detroit))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+gplots::heatmap.2(assay(rld.detroit)[select,],margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8)
+#heatmaply(assay(rld)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
+```
+
+## FaDu & SKN3
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld.fadu.skn3))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+gplots::heatmap.2(assay(rld.fadu.skn3)[select,], margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8)
+#heatmaply(assay(rld)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
 ```
 
 ## {-}

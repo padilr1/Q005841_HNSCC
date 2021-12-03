@@ -1,0 +1,148 @@
+---
+title: ""
+author: ""
+date: ""
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    number_sections: false
+    toc_depth: 3
+    smooth_scroll: false
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(gridExtra)
+library(grid)
+library(cowplot)
+library(reactable)
+library(data.table)
+library(reticulate)
+library(sciplot)
+library(plotly)
+library(matrixStats)
+library(SummarizedExperiment)
+library(RColorBrewer)
+library(heatmaply)
+#load RData
+load("~/Documents/Q005841_HNSCC/work/processed_dat/cdat_hnscc.RData")
+load("~/Documents/Q005841_HNSCC/work/processed_dat/dds_Dec2021_hnscc.RData")
+load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
+```
+
+# PCA (top 500 most variably expressed genes) {.tabset .tabset-pills}
+## All samples
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(rld)[select,]))
+condition <- cdat_hnscc_final$condition
+#cell_line <- cdat_hnscc_final$cell_line
+scores <- data.frame(pc$x, condition)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter") %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+
+## Cal27
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rld.cal27 <- rld[ , rld$cell_line %in% c("Cal27")]
+cal27_cdat <- cdat_hnscc_final %>%
+  dplyr::filter(cell_line == "Cal27")
+rv <- rowVars(assay(rld.cal27))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(rld.cal27)[select,]))
+condition <- cal27_cdat$condition
+#cell_line <- cdat_hnscc_final$cell_line
+scores <- data.frame(pc$x, condition)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter") %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+
+## Detroit
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rld.detroit <- rld[ , rld$cell_line %in% c("Detroit")]
+detroit_cdat <- cdat_hnscc_final %>%
+  dplyr::filter(cell_line == "Detroit")
+rv <- rowVars(assay(rld.detroit))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(rld.detroit[select,])))
+condition <- detroit_cdat$condition
+#cell_line <- cdat_hnscc_final$cell_line
+scores <- data.frame(pc$x, condition)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter") %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+## FaDu & SKN3
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rld.fadu.skn3 <- rld[ , rld$cell_line %in% c("FaDu","SKN3")]
+fadu_skn3_cdat <- cdat_hnscc_final %>%
+  dplyr::filter(cell_line == "SKN3" | cell_line == "FaDu")
+rv <- rowVars(assay(rld.fadu.skn3))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(rld.fadu.skn3[select,])))
+condition <- fadu_skn3_cdat$condition
+#cell_line <- cdat_hnscc_final$cell_line
+scores <- data.frame(pc$x, condition)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter") %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+## {-}
+
+# Correlation Heatmaps (top 500 most variably expressed genes) {.tabset .tabset-pills}
+## All samples
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+#sampleDists <- stats::dist(t(assay(rld[select])),method = "euclidean")
+#sampleDistMatrix <- as.matrix(sampleDists)
+#colors <- colorRampPalette( rev(brewer.pal(9, "YlOrRd")) )(255)
+#heatmaply(sampleDistMatrix,
+        #  clustering_distance_rows=sampleDists,
+       #   clustering_distance_cols=sampleDists,
+       #   col=colors,showticklabels = FALSE,key.title = "Euclidean distance",row_dend_left = TRUE,dend_hoverinfo #= FALSE)
+
+heatmaply_cor(
+  cor(assay(rld[select,])),showticklabels = FALSE,key.title = "",row_dend_left = TRUE)
+```
+## Cal27
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld.cal27))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+heatmaply_cor(
+  cor(assay(rld.cal27[select,])),showticklabels = FALSE,key.title = "",row_dend_left = TRUE,dend_hoverinfo = FALSE
+)
+```
+
+## Detroit
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld.detroit))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+heatmaply_cor(
+  cor(assay(rld.detroit[select,])),showticklabels = FALSE,key.title = "",row_dend_left = TRUE,dend_hoverinfo = FALSE
+)
+```
+
+## FaDu & SKN3
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+rv <- rowVars(assay(rld.fadu.skn3))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+heatmaply_cor(
+  cor(assay(rld.fadu.skn3[select,])),showticklabels = FALSE,key.title = "",row_dend_left = TRUE,dend_hoverinfo = FALSE
+)
+```
+
+## {-}

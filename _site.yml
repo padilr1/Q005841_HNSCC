@@ -1,0 +1,7 @@
+name: ""
+navbar:
+  title: "Q005841"
+  left:
+    - text: "HNSCC"
+      href: index.html
+output_dir: "docs"

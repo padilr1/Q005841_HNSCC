@@ -30,6 +30,19 @@ library(matrixStats)
 library(SummarizedExperiment)
 library(RColorBrewer)
 library(heatmaply)
+library(ggrepel)
+library(tidyverse)
+library(gprofiler2)
+library(patchwork)
+library(DESeq2)
+library(apeglm)
+library(EnsDb.Hsapiens.v79)
+library(org.Hs.eg.db)
+library(fgsea)
+library(msigdbr)
+library(compiler)
+library(shiny)
+library(tippy)
 #load RData
 load("~/Documents/Q005841_HNSCC/work/processed_dat/cdat_hnscc.RData")
 load("~/Documents/Q005841_HNSCC/work/processed_dat/dds_Dec2021_hnscc.RData")
@@ -180,5 +193,83 @@ select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
 gplots::heatmap.2(assay(rld.fadu.skn3)[select,], margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8)
 #heatmaply(assay(rld)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
 ```
+## {-}
 
+```{r include= FALSE}
+volc <- function(r, x, y, ylab, ttl) {
+  d <- as.data.frame(r) %>%
+    dplyr::rename(x = !!x, y = !!y) %>%
+    mutate(kind = case_when((abs(x) > 2 & y < .05) ~ 'DE',
+                            abs(x) > 2 ~ '|logFC|>2',
+                            y < .05 ~ 'FDR<0.05',
+                            T ~ 'NS'),
+           y = -log10(y))
+  ct <- d %>% 
+    dplyr::filter(kind == 'DE') %>%
+    mutate(up = x > 0) %>%
+    dplyr::count(up) %>%
+    mutate(x = ifelse(up, Inf, -Inf),
+           y = Inf,
+           h = as.numeric(up))
+  ggplot(d, aes(x, y, color = kind)) +
+    geom_vline(xintercept = c(-2, 2), linetype = 'dashed') +
+    geom_hline(yintercept = -log10(0.05), linetype = 'dashed') +
+    geom_point(alpha = .5) +
+    geom_label(aes(x = x, y = y, label = n, hjust = h),
+              vjust = 1, data = ct, inherit.aes = F) +
+     geom_text_repel(aes(label = gene), data = subset(d, kind == "DE"),max.overlaps = 10,show.legend = F, min.segment.length = 0) + scale_y_continuous() +
+    scale_color_manual(values = c('orange','forestgreen', 'red',  'black')) +
+    labs(x = x, y = ylab, title = ttl) + theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        legend.title = element_blank())
+}
+```
+
+
+# DGE Analysis {.tabset}
+## Cal27: NSD2.KO vs NSD1.KO {.tabset .tabset-pills}
+### Volcano plot
+```{r echo = FALSE, warning=FALSE,message=FALSE, fig.cap="NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05"}
+#How does NSD2-KO differ from NSD1-KO?
+#resLFC_cal27_nsd1v2 <- lfcShrink(dds, contrast = c('group', 'Cal27NSD2.KO', 'Cal27NSD1.KO'), type = 'normal')
+load("~/Documents/Q005841_HNSCC/data/rd_cal27_nsd1v2.RData")
+#volcano plot
+volc(rd_cal27,'log2FoldChange','padj','-log10(FDR)','')
+```
+### Pathway analysis - upregulated
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+#pathway analysis
+load("~/Documents/Q005841_HNSCC/data/cal27_pa.RData")
+
+gostplot(cal27_pa$up,capped = FALSE,interactive = TRUE)
+reactable(cal27_pa$up_reactable)
+```
+
+### Pathway analysis - downregulated
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+gostplot(cal27_pa$down,capped = FALSE,interactive = TRUE)
+reactable(cal27_pa$down_reactable)
+```
+
+### GSEA
+
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+load("~/Documents/Q005841_HNSCC/data/cal27_nsd1v2_gsea.RData")
+plot(cal27_nsd1v2_gsea$plot.r)
+cal27_nsd1v2_gsea$gsea_table
+```
+### GSEA Top hit
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+plot(cal27_nsd1v2_gsea$top_hit)
+```
+## {-}
+
+## Cal27: NSD.DKO vs NSD.TKO {.tabset .tabset-pills}
+
+### 
+```{r echo = FALSE, warning=FALSE,message=FALSE, fig.cap="NSD.DKO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05"}
+```
 ## {-}

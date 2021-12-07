@@ -2,6 +2,8 @@ name: ""
 navbar:
   title: "HNSCC"
   left:
-    - text: "Q005841"
+    - text: "QC"
       href: index.html
+    - text: "DGE Analysis"
+      href: second_page.html
 output_dir: "docs"

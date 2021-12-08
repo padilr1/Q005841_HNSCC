@@ -199,4 +199,4 @@ select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
 gplots::heatmap.2(assay(rld.fadu.skn3)[select,], margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8)
 #heatmaply(assay(rld)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
 ```
-## {.unlisted .unnumbered .toc-ignore}
+# {-}

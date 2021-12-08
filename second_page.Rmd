@@ -92,7 +92,7 @@ volc(rd_cal27,'log2FoldChange','padj','-log10(FDR)','')
 ```
 
 ## Pathway analysis - upregulated
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05"}
 #pathway analysis
 load("~/Documents/Q005841_HNSCC/data/cal27_pa.RData")
 
@@ -101,7 +101,7 @@ reactable(cal27_pa$up_reactable)
 ```
 
 ## Pathway analysis - downregulated
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05"}
 gostplot(cal27_pa$down,capped = FALSE,interactive = TRUE)
 reactable(cal27_pa$down_reactable)
 ```
@@ -125,7 +125,7 @@ plot(cal27_nsd1v2_gsea$top_hit)
 # Cal27: comparison of NSD knockouts {.tabset .tabset-pills}
 
 ## Volcano
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="DEG cutoff was FDR < 0.05 & |log2FC| > 2"}
 cs <- c('Cal27NSD1.KO', 'Cal27NSD2.KO', 'Cal27NSD.DKO', 'Cal27NSD.TKO')
 sclrs <- c(DE = 'forestgreen', 'FDR<0.05' = 'red', '|logFC|>2' = 'orange', 'NS' = 'black')
 load("~/Documents/Q005841_HNSCC/data/nsd_comparisons.RData")
@@ -228,6 +228,169 @@ hms$p
 ### Jaccard indices
 ```{r echo=FALSE, message=FALSE, warning=FALSE,out.width='100%',fig.height=6}
 hms$j
+```
+
+### {-}
+
+## Pathway Analysis  {.tabset}
+With these 4 conditions we can also ask if the genes consistently up- or down-regulated in a given condition relative to all others are enriched in certain pathways. Cutoff criteria FDR < 0.05 and |log2FC| > 1
+
+### Cal27NSD1.KO {.tabset} 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+load("~/Documents/Q005841_HNSCC/data/ug_cal27_nsd.RData")
+load("~/Documents/Q005841_HNSCC/data/uu_cal27_nsd.RData")
+load("~/Documents/Q005841_HNSCC/data/rr_cal27_nsd.RData")
+cnd <- 'Cal27NSD1.KO'
+```
+
+#### Higher than others 
+
+There were `r length(ug[[paste0(cnd, '.up')]])` such genes, but no enriched pathways.
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#gostplot(rr[[paste0(cnd, '.up')]])
+```
+
+#### Lower than others
+
+There were `r length(ug[[paste0(cnd, '.dn')]])` such genes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(rr[[paste0(cnd, '.dn')]])
+```
+
+```{r echo=FALSE,out.width='100%'}
+rr[[paste0(cnd, '.dn')]]$result %>% 
+           dplyr::select(term_name, source, term_size, query_size, 
+                         intersect_size = intersection_size, p = p_value) %>% 
+           mutate(source = factor(source)) %>%
+           datatable(style = 'bootstrap', class = 'table-hover table-condensed', 
+                     rownames = FALSE, filter = 'top') %>%
+           formatRound(columns = c('p'), digits=3)
+```
+
+### Cal27NSD2.KO {.tabset}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cnd <- 'Cal27NSD2.KO'
+```
+
+#### Higher than others
+
+There were `r length(ug[[paste0(cnd, '.up')]])` such genes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(rr[[paste0(cnd, '.up')]])
+```
+
+```{r echo=FALSE,out.width='100%'}
+rr[[paste0(cnd, '.up')]]$result %>% 
+           dplyr::select(term_name, source, term_size, query_size, 
+                         intersect_size = intersection_size, p = p_value) %>% 
+           mutate(source = factor(source)) %>%
+           datatable(style = 'bootstrap', class = 'table-hover table-condensed', 
+                     rownames = FALSE, filter = 'top') %>%
+           formatRound(columns = c('p'), digits=3)
+```
+
+#### Lower than others
+
+There were `r length(ug[[paste0(cnd, '.dn')]])` such genes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(rr[[paste0(cnd, '.dn')]])
+```
+
+```{r echo=FALSE,out.width='100%'}
+rr[[paste0(cnd, '.dn')]]$result %>% 
+           dplyr::select(term_name, source, term_size, query_size, 
+                         intersect_size = intersection_size, p = p_value) %>% 
+           mutate(source = factor(source)) %>%
+           datatable(style = 'bootstrap', class = 'table-hover table-condensed', 
+                     rownames = FALSE, filter = 'top') %>%
+           formatRound(columns = c('p'), digits=3)
+```
+
+### Cal27NSD.DKO {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cnd <- 'Cal27NSD.DKO'
+```
+
+#### Higher than others
+
+There were `r length(ug[[paste0(cnd, '.up')]])` such genes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#gostplot(rr[[paste0(cnd, '.up')]])
+```
+
+```{r echo=FALSE,out.width='100%'}
+#rr[[paste0(cnd, '.up')]]$result %>% 
+       #    dplyr::select(term_name, source, term_size, query_size, 
+          #               intersect_size = intersection_size, p = p_value) %>% 
+       #    mutate(source = factor(source)) %>%
+        ##   datatable(style = 'bootstrap', class = 'table-hover table-condensed', 
+        #             rownames = FALSE, filter = 'top') %>%
+        #   formatRound(columns = c('p'), digits=3)
+```
+
+#### Lower than others
+
+There were `r length(ug[[paste0(cnd, '.dn')]])` such genes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#gostplot(rr[[paste0(cnd, '.dn')]])
+```
+
+```{r echo=FALSE,out.width='100%'}
+#rr[[paste0(cnd, '.dn')]]$result %>% 
+         #  dplyr::select(term_name, source, term_size, query_size, 
+         #                intersect_size = intersection_size, p = p_value) %>% 
+        #   mutate(source = factor(source)) %>%
+        #   datatable(style = 'bootstrap', class = 'table-hover table-condensed', 
+        #             rownames = FALSE, filter = 'top') %>%
+       #    formatRound(columns = c('p'), digits=3)
+```
+
+### Cal27NSD.TKO {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cnd <- 'Cal27NSD.TKO'
+```
+
+#### Higher than others
+
+There were `r length(ug[[paste0(cnd, '.up')]])` such genes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(rr[[paste0(cnd, '.up')]])
+```
+
+```{r echo=FALSE,out.width='100%'}
+rr[[paste0(cnd, '.up')]]$result %>% 
+           dplyr::select(term_name, source, term_size, query_size, 
+                         intersect_size = intersection_size, p = p_value) %>% 
+           mutate(source = factor(source)) %>%
+           datatable(style = 'bootstrap', class = 'table-hover table-condensed', 
+                     rownames = FALSE, filter = 'top') %>%
+           formatRound(columns = c('p'), digits=3)
+```
+
+#### Lower than others
+
+There were `r length(ug[[paste0(cnd, '.dn')]])` such genes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(rr[[paste0(cnd, '.dn')]])
+```
+
+```{r echo=FALSE,out.width='100%'}
+rr[[paste0(cnd, '.dn')]]$result %>% 
+           dplyr::select(term_name, source, term_size, query_size, 
+                         intersect_size = intersection_size, p = p_value) %>% 
+           mutate(source = factor(source)) %>%
+           datatable(style = 'bootstrap', class = 'table-hover table-condensed', 
+                     rownames = FALSE, filter = 'top') %>%
+           formatRound(columns = c('p'), digits=3)
 ```
 
 ### {-}

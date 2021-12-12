@@ -55,11 +55,11 @@ load("~/Documents/Q005841_HNSCC/work/processed_dat/dds_Dec2021_hnscc.RData")
 load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
 ```
 
-# PCA (top 500 most variably expressed genes) {.tabset .tabset-pills}
+# PCA: only new samples {.tabset .tabset-pills}
 ## All samples
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Top 500 most variably expressed genes used"}
 rv <- rowVars(assay(rld))
-colnames(rld) <- gsub(pattern = "_2.19.*",replacement = "",colnames(rld))
+colnames(rld) <- gsub(pattern = "_2.19.*",replacement = "",colnames(rld)) #removes extra names
 select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
 pc <- prcomp(t(assay(rld)[select,]))
 condition <- cdat_hnscc_final$condition
@@ -122,7 +122,7 @@ plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",co
 ```
 ## {-}
 
-# Correlation Heatmaps (top 500 most variably expressed genes) {.tabset .tabset-pills}
+# Correlation Heatmaps: only new samples {.tabset .tabset-pills}
 ## All samples
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 rv <- rowVars(assay(rld))
@@ -167,7 +167,7 @@ heatmaply_cor(
 
 ## {-}
 
-# Hierarchical clustering (top 500 most variably expressed genes) {.tabset .tabset-pills}
+# Hierarchical clustering: only new samples {.tabset .tabset-pills}
 ## All samples
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 rv <- rowVars(assay(rld))
@@ -200,3 +200,125 @@ gplots::heatmap.2(assay(rld.fadu.skn3)[select,], margins = c(10, 6),trace = "non
 #heatmaply(assay(rld)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
 ```
 # {-}
+
+# PCA: old and new HNSCC samples {.tabset .tabset-pills}
+## All samples
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Top 500 most variably expressed genes used; Circles = new batch; Triangles = old batch"}
+load("~/Documents/Q005841_HNSCC/data/oldNewHNSCC_dds.RData")
+load("~/Documents/Q005841_HNSCC/data/oldnewHNSCC_vst.RData")
+load("~/Documents/Q005841_HNSCC/data/oldNew_mdat.RData")
+rv <- rowVars(assay(vst))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(vst)[select,]))
+condition <- hnscc_oldNew_mdat$condition
+batch <- hnscc_oldNew_mdat$batch
+#cell_line <- hnscc_oldNew_mdat$cell_line
+scores <- data.frame(pc$x, condition, batch)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+
+## Cal27
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+vst.cal27 <- vst[ , vst$cell_line %in% c("Cal27")]
+cal27_mdat <- hnscc_oldNew_mdat %>%
+  dplyr::filter(cell_line == "Cal27")
+rv <- rowVars(assay(vst.cal27))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(vst.cal27)[select,]))
+condition <- cal27_mdat$condition
+batch <- cal27_mdat$batch
+#cell_line <- hnscc_oldNew_mdat$cell_line
+scores <- data.frame(pc$x, condition, batch)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+
+## Detroit
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+vst.detroit <- vst[ , vst$cell_line %in% c("Detroit")]
+detroit_cdat <- hnscc_oldNew_mdat %>%
+  dplyr::filter(cell_line == "Detroit")
+rv <- rowVars(assay(vst.detroit))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(vst.detroit[select,])))
+condition <- detroit_cdat$condition
+batch <- detroit_cdat$batch
+#cell_line <- hnscc_oldNew_mdat$cell_line
+scores <- data.frame(pc$x, condition,batch)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+## FaDu & SKN3
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+vst.fadu.skn3 <- vst[ , vst$cell_line %in% c("FaDu","SKN3")]
+fadu_skn3_cdat <- hnscc_oldNew_mdat %>%
+  dplyr::filter(cell_line == "SKN3" | cell_line == "FaDu")
+rv <- rowVars(assay(vst.fadu.skn3))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(vst.fadu.skn3[select,])))
+condition <- fadu_skn3_cdat$condition
+batch <- fadu_skn3_cdat$batch
+#cell_line <- hnscc_oldNew_mdat$cell_line
+scores <- data.frame(pc$x, condition,batch)
+percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
+percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
+#plot
+plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter", symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+```
+## {-}
+# Hierarchical clustering: old and new HNSCC samples {.tabset .tabset-pills}
+## All samples
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Blue = old batch; Red = new batch"}
+rv <- rowVars(assay(vst))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+#
+cc_all <- 1:52
+cc_all[1:27] <- "red"
+cc_all[28:52] <- "blue"
+#
+gplots::heatmap.2(assay(vst)[select,], margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.5,colCol = cc_all)
+#heatmaply(assay(vst)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
+```
+## Cal27
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Blue = old batch; Red = new batch"}
+rv <- rowVars(assay(vst.cal27))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+#
+cc_cal27 <- 1:24
+cc_cal27[1:15] <- "red"
+cc_cal27[16:24] <- "blue"
+#
+gplots::heatmap.2(assay(vst.cal27)[select,],  margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8,colCol = cc_cal27)
+#heatmaply(assay(vst)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
+```
+## Detroit
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Blue = old batch; Red = new batch"}
+rv <- rowVars(assay(vst.detroit))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+#
+cc_Det <- 1:17
+cc_Det[1:6] <- "red"
+cc_Det[7:17] <- "blue"
+#
+gplots::heatmap.2(assay(vst.detroit)[select,],margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8,colCol = cc_Det)
+#heatmaply(assay(vst)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
+```
+## FaDu & SKN3
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Blue = old batch; Red = new batch"}
+rv <- rowVars(assay(vst.fadu.skn3))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+#
+cc_fad <- 1:9
+cc_fad[1:4] <- "red"
+cc_fad[5:9] <- "blue"
+#
+gplots::heatmap.2(assay(vst.fadu.skn3)[select,], margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8,colCol = cc_fad)
+#heatmaply(assay(vst)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
+```

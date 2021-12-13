@@ -255,11 +255,11 @@ percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%"
 #plot
 plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
 ```
-## FaDu & SKN3
+## FaDu
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
-vst.fadu.skn3 <- vst[ , vst$cell_line %in% c("FaDu","SKN3")]
+vst.fadu.skn3 <- vst[ , vst$cell_line %in% c("FaDu")]
 fadu_skn3_cdat <- hnscc_oldNew_mdat %>%
-  dplyr::filter(cell_line == "SKN3" | cell_line == "FaDu")
+  dplyr::filter(cell_line == "FaDu")
 rv <- rowVars(assay(vst.fadu.skn3))
 select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
 pc <- prcomp(t(assay(vst.fadu.skn3[select,])))
@@ -310,14 +310,16 @@ cc_Det[7:17] <- "blue"
 gplots::heatmap.2(assay(vst.detroit)[select,],margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8,colCol = cc_Det)
 #heatmaply(assay(vst)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)
 ```
-## FaDu & SKN3
+## FaDu
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Blue = old batch; Red = new batch"}
 rv <- rowVars(assay(vst.fadu.skn3))
 select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
 #
-cc_fad <- 1:9
+cc_fad <- 1:6
 cc_fad[1:4] <- "red"
-cc_fad[5:9] <- "blue"
+cc_fad[5:6] <- "blue"
+
+check <- assay(vst.fadu.skn3)[select,]
 #
 gplots::heatmap.2(assay(vst.fadu.skn3)[select,], margins = c(10, 6),trace = "none", col = viridis(100),srtCol = 70,cexCol = 0.8,colCol = cc_fad)
 #heatmaply(assay(vst)[select,],seriate = "mean",row_dend_left=TRUE,plot_method="plotly",hide_colorbar = TRUE)

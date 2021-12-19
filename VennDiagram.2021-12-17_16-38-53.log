@@ -1,0 +1,12 @@
+INFO [2021-12-17 16:38:53] $x
+INFO [2021-12-17 16:38:53] list(cal27OE.K36M_v_K36WT$ensembl_gene_id[cal27OE.K36M_v_K36WT$padj < 
+INFO [2021-12-17 16:38:53]     0.05 & abs(cal27OE.K36M_v_K36WT$log2FoldChange) > 2], cal27_nsd1ko_v_wt$ensembl_gene_id[cal27_nsd1ko_v_wt$padj < 
+INFO [2021-12-17 16:38:53]     0.05 & abs(cal27_nsd1ko_v_wt$log2FoldChange) > 2], cal27_nsd2ko_v_wt$ensembl_gene_id[cal27_nsd2ko_v_wt$padj < 
+INFO [2021-12-17 16:38:53]     0.05 & abs(cal27_nsd2ko_v_wt$log2FoldChange) > 2])
+INFO [2021-12-17 16:38:53] 
+INFO [2021-12-17 16:38:53] $category.names
+INFO [2021-12-17 16:38:53] c("K36M.OE", "NSD1.KO", "NSD2.KO")
+INFO [2021-12-17 16:38:53] 
+INFO [2021-12-17 16:38:53] $filename
+INFO [2021-12-17 16:38:53] NULL
+INFO [2021-12-17 16:38:53] 

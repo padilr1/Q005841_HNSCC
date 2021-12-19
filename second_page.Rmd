@@ -46,6 +46,8 @@ library(broom)
 library(DT)
 library(EnsDb.Hsapiens.v79)
 library(org.Hs.eg.db)
+library(eulerr)
+library(GeneOverlap)
 #load RData
 load("~/Documents/Q005841_HNSCC/work/processed_dat/dds_Dec2021_hnscc.RData")
 load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
@@ -93,6 +95,37 @@ volc <- function(r, x, y, ylab, ttl) {
         panel.border = element_blank(),
         panel.background = element_blank(),
         legend.title = element_blank())
+}
+###overlap analysis###
+overlap_analysis <- cmpfun(function(dds,grouping,cond1,cond2,baseCond,fc_cutoff){ #x is dge df; bg = background list
+  x1 <- get_dge_df(dds,grouping,cond1,baseCond) 
+  x2 <- get_dge_df(dds,grouping,cond2,baseCond)
+  bg <- rbind(x1,x2)
+  bg <- bg$ensembl_gene_id
+  bg <- bg[!duplicated(bg)]
+  go.obj <- newGeneOverlap(x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > fc_cutoff],x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > fc_cutoff],genome.size=length(bg),spec="hg19.gene")
+go.obj <- testGeneOverlap(go.obj)
+  pa <- gost(go.obj@intersection,
+             organism = 'hsapiens',
+             custom_bg = bg,
+             user_threshold = 0.05,
+             significant = TRUE,
+             evcodes = TRUE,
+             exclude_iea = TRUE,
+             correction_method = "fdr",
+             sources = c("GO","KEGG"))
+  reactable <- pa$result %>%
+    dplyr::select(source, term_name, intersection_size, p_value) %>% 
+  arrange(p_value) %>%
+  setNames(c("Source","Pathway","Number of Genes","FDR"))
+  return(list(x1=x1,x2=x2,go.obj=go.obj,pa=pa,reactable=reactable))
+})
+###eulergraph###
+get_euler_graph <- function(ttl1,ttl2,ttl3,x1,x2,x3,logfc_cutoff){
+x <- list(c1 = x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > logfc_cutoff],c2 = x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > logfc_cutoff],c3 = x3$ensembl_gene_id[x3$padj < .05 & abs(x3$log2FoldChange) > logfc_cutoff])
+names(x) <- c(ttl1,ttl2,ttl3)
+p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+return(p)
 }
 ```
 
@@ -440,6 +473,34 @@ volc(k36mOE_v_nsd2ko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 ### K36M-OE v NSD.DKO
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 volc(k36mOE_v_nsdDko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
+```
+
+## Overlapping DEGS {.tabset}
+
+Overlapping DEGs were obtained from K36M.OE against K36WT, NSD1KO against K36WT and NSD2KO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
+
+### Euler graphs
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#need to pa before euler graph
+k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD1.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
+#
+k36m.OE_v_nsd2ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD2.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
+#
+get_euler_graph("K36M.OE","NSD1.KO","NSD2.KO",k36m.OE_v_nsd1ko$x1,k36m.OE_v_nsd1ko$x2,k36m.OE_v_nsd2ko$x2,0.05)
+```
+
+### Pathway analysis for overlapping DEGs {.tabset}
+
+#### K36M.OE v NSD1KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(k36m.OE_v_nsd1ko$pa)
+reactable(k36m.OE_v_nsd1ko$reactable)
+```
+
+#### K36M.OE v NSD2KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(k36m.OE_v_nsd2ko$pa)
+reactable(k36m.OE_v_nsd2ko$reactable)
 ```
 
 ## Pathway analysis - upregulated {.tabset}

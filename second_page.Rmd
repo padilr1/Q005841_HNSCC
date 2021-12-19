@@ -442,10 +442,6 @@ rr[[paste0(cnd, '.dn')]]$result %>%
 
 ### {-}
 
-```{r include = FALSE}
-#Can NSD2-OE return NSD1-KO or NSD1-MT cells to a NSD1-WT-like state?
-```
-
 # Cal27: K36M-OE vs NSD1/2KO {.tabset .tabset-pills}
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline"}
 #Are genes affected by K36M-OE the same ones that change when we perturb NSD1 and/or NSD2?
@@ -486,6 +482,8 @@ k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27
 #
 k36m.OE_v_nsd2ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD2.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
 #
+k36m.OE_v_nsdDko <- overlap_analysis(dds = dds, grouping= "group", cond1 = "Cal27OE.K36M",cond2="Cal27NSD.DKO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
+#
 get_euler_graph("K36M.OE","NSD1.KO","NSD2.KO",k36m.OE_v_nsd1ko$x1,k36m.OE_v_nsd1ko$x2,k36m.OE_v_nsd2ko$x2,0.05)
 ```
 
@@ -501,6 +499,12 @@ reactable(k36m.OE_v_nsd1ko$reactable)
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 gostplot(k36m.OE_v_nsd2ko$pa)
 reactable(k36m.OE_v_nsd2ko$reactable)
+```
+
+#### K36M.OE v NSD.DKO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(k36m.OE_v_nsdDko$pa)
+reactable(k36m.OE_v_nsdDko$reactable)
 ```
 
 ## Pathway analysis - upregulated {.tabset}
@@ -597,4 +601,26 @@ plot(gsea_k36mOE_v_NSD2KO$top_hit)
 ### K36M-OE v NSD.DKO
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 plot(gsea_k36mOE_v_NSD.DKO$top_hit)
+```
+
+# NSD2-OE {.tabset .tabset-pills}
+
+## Cal27
+
+We see very few DEGs comparing NSD2-OE to parental, indicating NSD2-OE may indeed return NSD1-KO cells to a NSD1-WT-like state. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#Can NSD2-OE return NSD1-KO or NSD1-MT cells to a NSD1-WT-like state?
+cal27_nsd2_oe <- get_dge_df(dds = dds,group = "group",sampA = "Cal27NSD1KO.OE.NSD2", ref_sampB = "Cal27Parental")
+volc(cal27_nsd2_oe,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
+```
+
+## FaDu
+
+FaDu NSD2.OE vs FaDu parental. Unsure if this result is trustworthy considering that FaDu parental had elevated levels of introns. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#Can NSD2-OE return NSD1-KO or NSD1-MT cells to a NSD1-WT-like state?
+fad_nsd2_oe <- get_dge_df(dds = dds,group = "group",sampA = "FaDuNSD1KO.OE.NSD2", ref_sampB = "FaDuParental")
+volc(fad_nsd2_oe,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 ```

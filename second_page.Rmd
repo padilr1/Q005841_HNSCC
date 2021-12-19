@@ -473,9 +473,10 @@ volc(k36mOE_v_nsdDko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 
 ## Overlapping DEGS {.tabset}
 
-Overlapping DEGs were obtained from K36M.OE against K36WT, NSD1KO against K36WT and NSD2KO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
+Overlapping DEGs were obtained from K36M.OE against K36WT, NSD1KO against K36WT, NSD2KO against K36WT & NSD.DKO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
 
 ### Euler graphs
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 #need to pa before euler graph
 k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD1.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)

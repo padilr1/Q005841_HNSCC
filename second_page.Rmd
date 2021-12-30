@@ -120,10 +120,17 @@ go.obj <- testGeneOverlap(go.obj)
   setNames(c("Source","Pathway","Number of Genes","FDR"))
   return(list(x1=x1,x2=x2,go.obj=go.obj,pa=pa,reactable=reactable))
 })
-###eulergraph###
+###eulergraph for 3 groups###
 get_euler_graph <- function(ttl1,ttl2,ttl3,x1,x2,x3,logfc_cutoff){
 x <- list(c1 = x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > logfc_cutoff],c2 = x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > logfc_cutoff],c3 = x3$ensembl_gene_id[x3$padj < .05 & abs(x3$log2FoldChange) > logfc_cutoff])
 names(x) <- c(ttl1,ttl2,ttl3)
+p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+return(p)
+}
+###eulergraph for 2 groups####
+get_euler_graph_for_two <- function(ttl1,ttl2,x1,x2,logfc_cutoff){
+x <- list(c1 = x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > logfc_cutoff],c2 = x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > logfc_cutoff])
+names(x) <- c(ttl1,ttl2)
 p <- plot(euler(x),legend=FALSE,quantities=TRUE)
 return(p)
 }
@@ -168,6 +175,8 @@ plot(cal27_nsd1v2_gsea$top_hit)
 ## {-}
 
 ---
+
+<p>&nbsp;</p>
 
 # Cal27: comparison of NSD knockouts {.tabset .tabset-pills}
 
@@ -440,6 +449,10 @@ rr[[paste0(cnd, '.dn')]]$result %>%
            formatRound(columns = c('p'), digits=3)
 ```
 
+<p>&nbsp;</p>
+
+---
+
 ### {-}
 
 # Cal27: K36M-OE vs NSD1/2KO {.tabset .tabset-pills}
@@ -604,13 +617,89 @@ plot(gsea_k36mOE_v_NSD2KO$top_hit)
 plot(gsea_k36mOE_v_NSD.DKO$top_hit)
 ```
 
+---
+
+<p>&nbsp;</p>
+
+# Detroit: K36M-OE vs NSD1KO {.tabset .tabset-pills}
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline"}
+#Are genes affected by K36M-OE the same ones that change when we perturb NSD1 and/or NSD2?
+det_k36mOE_v_nsd1ko <- get_dge_df(dds,"group","DetroitNSD1.KO","DetroitOE.K36M")
+#save/load
+#save(det_k36mOE_v_nsd1ko,file="~/Documents/Q005841_HNSCC/data/det_k36mOE_v_nsd1ko.RData")
+load("~/Documents/Q005841_HNSCC/data/det_k36mOE_v_nsd1ko.RData")
+```
+
+## Volcano
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+volc(det_k36mOE_v_nsd1ko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
+```
+
+## Overlapping DEGS {.tabset}
+
+Overlapping DEGs were obtained from K36M.OE against K36WT and NSD1KO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
+
+### Euler graphs
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#need to do overlap pathway analysis before euler graph
+det_k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD1.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
+#
+get_euler_graph_for_two("K36M.OE","NSD1.KO",det_k36m.OE_v_nsd1ko$x1,det_k36m.OE_v_nsd1ko$x2,0.05)
+```
+
+### Pathway analysis
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(det_k36m.OE_v_nsd1ko$pa)
+reactable(det_k36m.OE_v_nsd1ko$reactable)
+```
+
+## Pathway analysis - upregulated
+
+Only DEGs with |log2FC|>1 & FDR < 0.05 were inputted. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#det_pa_k36mOE_v_nsd1ko <- pathway_analysis(det_k36mOE_v_nsd1ko,1)
+#may need to adjust fc if few DEGs
+#save(det_pa_k36mOE_v_nsd1ko,file="~/Documents/Q005841_HNSCC/data/det_pa_k36mOE_v_nsd1ko.RData")
+load("~/Documents/Q005841_HNSCC/data/det_pa_k36mOE_v_nsd1ko.RData")
+gostplot(det_pa_k36mOE_v_nsd1ko$up,capped = FALSE,interactive = TRUE)
+reactable(det_pa_k36mOE_v_nsd1ko$up_reactable)
+```
+
+## Pathway analysis - downregulated
+
+Only DEGs with |log2FC|>1 & FDR < 0.05 were inputted.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(det_pa_k36mOE_v_nsd1ko$down,capped = FALSE,interactive = TRUE)
+reactable(det_pa_k36mOE_v_nsd1ko$down_reactable)
+```
+
+## GSEA
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#det_gsea_k36mOE_v_NSD1KO <- gsea(det_k36mOE_v_nsd1ko)
+#save(det_gsea_k36mOE_v_NSD1KO,file="~/Documents/Q005841_HNSCC/data/det_gsea_k36mOE_v_NSD1KO_cal27.RData")
+load("~/Documents/Q005841_HNSCC/data/det_gsea_k36mOE_v_NSD1KO_cal27.RData")
+plot(det_gsea_k36mOE_v_NSD1KO$plot.r)
+det_gsea_k36mOE_v_NSD1KO$gsea_table
+```
+
+## GSEA top hit
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+plot(det_gsea_k36mOE_v_NSD1KO$top_hit)
+```
+
+---
+
+<p>&nbsp;</p>
+
 # NSD2-OE {.tabset .tabset-pills}
 
 ## Cal27
 
 We see very few DEGs comparing NSD2-OE to parental, indicating NSD2-OE may indeed return NSD1-KO cells to a NSD1-WT-like state. 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%', fig.cap="DEs have |logFC|>2 & FDR < 0.05"}
 #Can NSD2-OE return NSD1-KO or NSD1-MT cells to a NSD1-WT-like state?
 cal27_nsd2_oe <- get_dge_df(dds = dds,group = "group",sampA = "Cal27NSD1KO.OE.NSD2", ref_sampB = "Cal27Parental")
 volc(cal27_nsd2_oe,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
@@ -620,7 +709,7 @@ volc(cal27_nsd2_oe,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 
 FaDu NSD2.OE vs FaDu parental. Unsure if this result is trustworthy considering that FaDu parental had elevated levels of introns. 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="DEs have |logFC|>2 & FDR < 0.05"}
 #Can NSD2-OE return NSD1-KO or NSD1-MT cells to a NSD1-WT-like state?
 fad_nsd2_oe <- get_dge_df(dds = dds,group = "group",sampA = "FaDuNSD1KO.OE.NSD2", ref_sampB = "FaDuParental")
 volc(fad_nsd2_oe,'log2FoldChange','padj',ylab = "-log10(FDR)",'')

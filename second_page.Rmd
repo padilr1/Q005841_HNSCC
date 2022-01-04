@@ -53,6 +53,9 @@ load("~/Documents/Q005841_HNSCC/work/processed_dat/dds_Dec2021_hnscc.RData")
 load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
 ```
 # Cal27: NSD2.KO vs NSD1.KO {.tabset .tabset-pills}
+
+We find more upregulated genes in NSD2.KO than downregulated ones. However, both upregulated and downregulated genes are enriched in cellular structure development, although downregulated genes are also enriched in pathways in cancer. 
+
 ```{r include= FALSE}
 get_dge_df <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
   df <- dds %>%
@@ -179,6 +182,8 @@ plot(cal27_nsd1v2_gsea$top_hit)
 <p>&nbsp;</p>
 
 # Cal27: comparison of NSD knockouts {.tabset .tabset-pills}
+
+NSD.DKO has few DEGs when compared to NSD1.KO. Largest number of DEGs found between TKO and NSD2.KO. There appears to have some enriched pathways in TKO and in NSD2.KO compared to others, but few in NSD1.KO and none in NSD.DKO
 
 ## Volcano
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="DEG cutoff was FDR < 0.05 & |log2FC| > 2"}
@@ -456,6 +461,9 @@ rr[[paste0(cnd, '.dn')]]$result %>%
 ### {-}
 
 # Cal27: K36M-OE vs NSD1/2KO {.tabset .tabset-pills}
+
+Many more downregulated genes in NSD1KO compared to K36M-OE whereas NSD2.KO vs K36M-OE results in roughly equal DEGs in either direction.
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline"}
 #Are genes affected by K36M-OE the same ones that change when we perturb NSD1 and/or NSD2?
 #k36mOE_v_nsd1ko <- get_dge_df(dds,"group","Cal27NSD1.KO","Cal27OE.K36M")
@@ -486,7 +494,10 @@ volc(k36mOE_v_nsdDko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 
 ## Overlapping DEGS {.tabset}
 
-Overlapping DEGs were obtained from K36M.OE against K36WT, NSD1KO against K36WT, NSD2KO against K36WT & NSD.DKO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
+Overlapping DEGs were obtained from K36M.OE against K36WT, NSD1KO against K36WT, NSD2KO against K36WT & NSD.DKO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5.
+<p>&nbsp;</p>
+86 genes differentially expressed when we perturb NSD1 compared to K36M-OE
+94 genes in common when we perturb NSD2 compared to K36M-OE
 
 ### Euler graphs
 
@@ -697,7 +708,7 @@ plot(det_gsea_k36mOE_v_NSD1KO$top_hit)
 
 ## Cal27
 
-We see very few DEGs comparing NSD2-OE to parental, indicating NSD2-OE may indeed return NSD1-KO cells to a NSD1-WT-like state. 
+In Cal27, we see very few DEGs comparing NSD2-OE to parental, indicating NSD2-OE may indeed return NSD1-KO cells to a NSD1-WT-like state. 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%', fig.cap="DEs have |logFC|>2 & FDR < 0.05"}
 #Can NSD2-OE return NSD1-KO or NSD1-MT cells to a NSD1-WT-like state?
@@ -707,7 +718,7 @@ volc(cal27_nsd2_oe,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 
 ## FaDu
 
-FaDu NSD2.OE vs FaDu parental. Unsure if this result is trustworthy considering that FaDu parental had elevated levels of introns. 
+FaDu NSD2.OE vs FaDu parental. 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="DEs have |logFC|>2 & FDR < 0.05"}
 #Can NSD2-OE return NSD1-KO or NSD1-MT cells to a NSD1-WT-like state?

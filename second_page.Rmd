@@ -464,6 +464,8 @@ rr[[paste0(cnd, '.dn')]]$result %>%
 
 Many more downregulated genes in NSD1KO compared to K36M-OE whereas NSD2.KO vs K36M-OE results in roughly equal DEGs in either direction.
 
+<p>&nbsp;</p>
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline"}
 #Are genes affected by K36M-OE the same ones that change when we perturb NSD1 and/or NSD2?
 #k36mOE_v_nsd1ko <- get_dge_df(dds,"group","Cal27NSD1.KO","Cal27OE.K36M")

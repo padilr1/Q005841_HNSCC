@@ -56,7 +56,7 @@ load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
 
 <b> NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05 </b>
 
-We find more upregulated genes in NSD2.KO than downregulated ones. However, overrepresentation of similar pathways are found in both upregulated and downregulated genes, such as cell periphery and development process. However, downregulated genes are also enriched in pathways in cancer & calcium signaling. 
+We find more upregulated genes in NSD2.KO than downregulated ones. However, overrepresentation of similar pathways are found in upregulated and downregulated genes, such as cell periphery and multicellular organismal process. However, downregulated genes are also enriched in pathways in cancer & calcium signaling.
 
 ```{r include= FALSE}
 get_dge_df <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
@@ -126,9 +126,9 @@ go.obj <- testGeneOverlap(go.obj)
   return(list(x1=x1,x2=x2,go.obj=go.obj,pa=pa,reactable=reactable))
 })
 ###eulergraph for 3 groups###
-get_euler_graph <- function(ttl1,ttl2,ttl3,x1,x2,x3,logfc_cutoff){
-x <- list(c1 = x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > logfc_cutoff],c2 = x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > logfc_cutoff],c3 = x3$ensembl_gene_id[x3$padj < .05 & abs(x3$log2FoldChange) > logfc_cutoff])
-names(x) <- c(ttl1,ttl2,ttl3)
+get_euler_graph <- function(ttl1,ttl2,ttl3,ttl4,x1,x2,x3,x4,logfc_cutoff){
+x <- list(c1 = x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > logfc_cutoff],c2 = x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > logfc_cutoff],c3 = x3$ensembl_gene_id[x3$padj < .05 & abs(x3$log2FoldChange) > logfc_cutoff],c4 = x4$ensembl_gene_id[x4$padj < .05 & abs(x4$log2FoldChange) > logfc_cutoff])
+names(x) <- c(ttl1,ttl2,ttl3,ttl4)
 p <- plot(euler(x),legend=FALSE,quantities=TRUE)
 return(p)
 }
@@ -225,7 +225,7 @@ ggplot(pd, aes(x = log2FoldChange, y = -log10(padj))) +
 
 We evaluate how these DEGs behave in different contrast overlap. The criteria for DEG here is only padj < 0.05.
 
-Essentially we recapitulate what we see from PCA and volcano plots, in that NSD.1KO is not so different from NSD.DKO. NSD.2KO seems to be very different to NSD.TKO?
+Essentially we recapitulate what we see from PCA and volcano plots, in that NSD1KO is not so different from NSD.DKO. 
 
 ### Odds ratio 
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
@@ -309,7 +309,7 @@ hms$j
 
 With these 4 conditions we can also ask if the genes consistently up- or down-regulated in a given condition relative to all others are enriched in certain pathways. Cutoff criteria FDR < 0.05 and |log2FC| > 1
 
-NSD1.KO and NSD.DKO had few DEGs relative to all others and few overrepresented pathways. On the other hand, NSD2.KO and NSD.TKO had a greater number of DEGs and overrepresented pathways. 
+NSD1.KO and NSD.DKO had few DEGs relative to all others and few overrepresented pathways. On the other hand, NSD2.KO and NSD.TKO had a greater number of DEGs and a few overrepresented pathways. 
 
 ### Cal27NSD1.KO {.tabset} 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -513,9 +513,10 @@ volc(k36mOE_v_nsdDko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 
 ## Pathway analysis - upregulated {.tabset}
 
-Comparing NSD1.KO to K36M-OE, cell periphery is an enriched pathway, similar to when comparing NSD1.KO to NSD2.KO. 
+Comparing NSD1.KO to K36M-OE, cell periphery is an overrepresented pathway, similar to when comparing NSD1.KO to NSD2.KO. 
+
 <p>&nbsp;</p>
-Comparing NSD.DKO to K36M-OE, overrepresentation of genes related to chromosome. 
+Comparing NSD2KO & NSD.DKO to K36M-OE, we find overrepresentation gene sets involved with chromosomal components.
 
 ### K36M-OE v NSD1KO
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
@@ -543,7 +544,7 @@ reactable(pa_k36mOE_v_nsdDko$up_reactable)
 
 ## Pathway analysis - downregulated {.tabset}
 
-Comparing downregulated NSD1.KO, NSD2.KO or NSD.DKO to K36M-OE, similar overrepresented pathways are found as when comparing NSD1.KO to NSD2.KO. Example: cellular structure development, cellular development
+Comparing downregulated NSD1.KO, NSD2.KO or NSD.DKO to K36M-OE, similar overrepresented pathways are found as when comparing NSD1.KO to NSD2.KO. Example: cell periphery, multicellular organismal process
 
 ### K36M-OE v NSD1KO
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
@@ -565,7 +566,7 @@ reactable(pa_k36mOE_v_nsdDko$down_reactable)
 
 ## GSEA {.tabset}
 
-NSD2.KO seems to have different enriched pathways in the downregulated genes: cholesterol homeostasis. NSD1KO and NSD.DKO compared to K36M-OE seems to have similarly enriched pathways.
+Upregulated genes seems to have similar enriched pathways.
 
 ### K36M-OE v NSD1KO
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
@@ -617,8 +618,11 @@ plot(gsea_k36mOE_v_NSD.DKO$top_hit)
 
 Overlapping DEGs were obtained from K36M.OE against K36WT, NSD1KO against K36WT, NSD2KO against K36WT & NSD.DKO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5.
 <p>&nbsp;</p>
-86 genes differentially expressed when we perturb NSD1 compared to K36M-OE
-94 genes in common when we perturb NSD2 compared to K36M-OE
+86 DEGs in common between NSD1 & K36M-OE
+<p>&nbsp;</p>
+94 DEGs in common between NSD2 & K36M-OE
+<p>&nbsp;</p>
+66 genes in common between NSD.DKO & K36M-OE
 
 ### Euler graphs
 
@@ -630,10 +634,12 @@ k36m.OE_v_nsd2ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27
 #
 k36m.OE_v_nsdDko <- overlap_analysis(dds = dds, grouping= "group", cond1 = "Cal27OE.K36M",cond2="Cal27NSD.DKO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
 #
-get_euler_graph("K36M.OE","NSD1.KO","NSD2.KO",k36m.OE_v_nsd1ko$x1,k36m.OE_v_nsd1ko$x2,k36m.OE_v_nsd2ko$x2,0.05)
+get_euler_graph("K36M.OE","NSD1.KO","NSD2.KO", "NSD.DKO",k36m.OE_v_nsd1ko$x1,k36m.OE_v_nsd1ko$x2,k36m.OE_v_nsd2ko$x2,k36m.OE_v_nsdDko$x2,0.05)
 ```
 
 ### Pathway analysis for overlapping DEGs {.tabset}
+
+Overlapping DEGs also have overrepresentation of pathways related to 'cell periphery' and cellular component.
 
 #### K36M.OE v NSD1KO
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
@@ -658,6 +664,9 @@ reactable(k36m.OE_v_nsdDko$reactable)
 <p>&nbsp;</p>
 
 # Detroit: K36M-OE vs NSD1KO {.tabset .tabset-pills}
+
+Fewer DEGs comparing K36M-OE to NSD1KO in Detroit cell line. Downregulated genes are overrepresented in similar pathways as Cal27 cell line. 
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline"}
 #Are genes affected by K36M-OE the same ones that change when we perturb NSD1 and/or NSD2?
 det_k36mOE_v_nsd1ko <- get_dge_df(dds,"group","DetroitNSD1.KO","DetroitOE.K36M")
@@ -694,6 +703,9 @@ reactable(det_pa_k36mOE_v_nsd1ko$down_reactable)
 ```
 
 ## GSEA
+
+GSEA results 
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 #det_gsea_k36mOE_v_NSD1KO <- gsea(det_k36mOE_v_nsd1ko)
 #save(det_gsea_k36mOE_v_NSD1KO,file="~/Documents/Q005841_HNSCC/data/det_gsea_k36mOE_v_NSD1KO_cal27.RData")
@@ -711,10 +723,16 @@ plot(det_gsea_k36mOE_v_NSD1KO$top_hit)
 
 Overlapping DEGs were obtained from K36M.OE against K36WT and NSD1KO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
 
+Few overlapping DEGs are found.
+
+<p>&nbsp;</p>
+
+Similar 
+
 ### Euler graphs
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 #need to do overlap pathway analysis before euler graph
-det_k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD1.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
+det_k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "DetroitOE.K36M",cond2 = "DetroitNSD1.KO",baseCond = "DetroitOE.K36WT",fc_cutoff = 0.5)
 #
 get_euler_graph_for_two("K36M.OE","NSD1.KO",det_k36m.OE_v_nsd1ko$x1,det_k36m.OE_v_nsd1ko$x2,0.05)
 ```

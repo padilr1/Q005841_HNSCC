@@ -54,7 +54,9 @@ load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
 ```
 # Cal27: NSD2.KO vs NSD1.KO {.tabset .tabset-pills}
 
-We find more upregulated genes in NSD2.KO than downregulated ones. However, both upregulated and downregulated genes are enriched in cellular structure development, although downregulated genes are also enriched in pathways in cancer. 
+<b> NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05 </b>
+
+We find more upregulated genes in NSD2.KO than downregulated ones. However, overrepresentation of similar pathways are found in both upregulated and downregulated genes, such as cell periphery and development process. However, downregulated genes are also enriched in pathways in cancer & calcium signaling. 
 
 ```{r include= FALSE}
 get_dge_df <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
@@ -140,7 +142,7 @@ return(p)
 ```
 
 ## Volcano
-```{r echo = FALSE, warning=FALSE,message=FALSE, fig.cap="NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05",out.width='100%'}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 #How does NSD2-KO differ from NSD1-KO?
 #resLFC_cal27_nsd1v2 <- lfcShrink(dds, contrast = c('group', 'Cal27NSD2.KO', 'Cal27NSD1.KO'), type = 'normal')
 load("~/Documents/Q005841_HNSCC/data/rd_cal27_nsd1v2.RData")
@@ -149,7 +151,7 @@ volc(rd_cal27,'log2FoldChange','padj','-log10(FDR)','')
 ```
 
 ## Pathway analysis - upregulated
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05"}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 #pathway analysis
 load("~/Documents/Q005841_HNSCC/data/cal27_pa.RData")
 
@@ -158,12 +160,15 @@ reactable(cal27_pa$up_reactable)
 ```
 
 ## Pathway analysis - downregulated
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05"}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 gostplot(cal27_pa$down,capped = FALSE,interactive = TRUE)
 reactable(cal27_pa$down_reactable)
 ```
 
 ## GSEA
+
+Downregulated genes are enriched in oxidative phosphorylation and p53 pathway. Upregulated genes are enriched in epithelial mesechymal transition. 
+
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 load("~/Documents/Q005841_HNSCC/data/cal27_nsd1v2_gsea.RData")
 plot(cal27_nsd1v2_gsea$plot.r)
@@ -183,10 +188,13 @@ plot(cal27_nsd1v2_gsea$top_hit)
 
 # Cal27: comparison of NSD knockouts {.tabset .tabset-pills}
 
-NSD.DKO has few DEGs when compared to NSD1.KO. Largest number of DEGs found between TKO and NSD2.KO. There appears to have some enriched pathways in TKO and in NSD2.KO compared to others, but few in NSD1.KO and none in NSD.DKO
-
 ## Volcano
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="DEG cutoff was FDR < 0.05 & |log2FC| > 2"}
+
+<b> DEG cutoff for the volcano plots was FDR < 0.05 & |log2FC| > 2 </b>
+
+NSD.DKO has few DEGs when compared to NSD1KO. Largest number of DEGs found between TKO and NSD2KO. 
+
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 cs <- c('Cal27NSD1.KO', 'Cal27NSD2.KO', 'Cal27NSD.DKO', 'Cal27NSD.TKO')
 sclrs <- c(DE = 'forestgreen', 'FDR<0.05' = 'red', '|logFC|>2' = 'orange', 'NS' = 'black')
 load("~/Documents/Q005841_HNSCC/data/nsd_comparisons.RData")
@@ -214,6 +222,10 @@ ggplot(pd, aes(x = log2FoldChange, y = -log10(padj))) +
 ```
 
 ## Overlap {.tabset}
+
+We evaluate how these DEGs behave in different contrast overlap. The criteria for DEG here is only padj < 0.05.
+
+Essentially we recapitulate what we see from PCA and volcano plots, in that NSD.1KO is not so different from NSD.DKO. NSD.2KO seems to be very different to NSD.TKO?
 
 ### Odds ratio 
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
@@ -294,7 +306,10 @@ hms$j
 ### {-}
 
 ## Pathway Analysis  {.tabset}
+
 With these 4 conditions we can also ask if the genes consistently up- or down-regulated in a given condition relative to all others are enriched in certain pathways. Cutoff criteria FDR < 0.05 and |log2FC| > 1
+
+NSD1.KO and NSD.DKO had few DEGs relative to all others and few overrepresented pathways. On the other hand, NSD2.KO and NSD.TKO had a greater number of DEGs and overrepresented pathways. 
 
 ### Cal27NSD1.KO {.tabset} 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -462,11 +477,13 @@ rr[[paste0(cnd, '.dn')]]$result %>%
 
 # Cal27: K36M-OE vs NSD1/2KO {.tabset .tabset-pills}
 
-Many more downregulated genes in NSD1KO compared to K36M-OE whereas NSD2.KO vs K36M-OE results in roughly equal DEGs in either direction.
+<b> For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline. DEGs cutoff padj < 0.05 & |log2FC| > 2. </b>
+
+Many more downregulated genes in NSD1KO compared to K36M-OE whereas NSD2.KO vs K36M-OE results in roughly equal DEGs in either direction. Number of DEGs actually decrease when comparing NSD.DKO to K36M-OE. 
 
 <p>&nbsp;</p>
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%',fig.cap="For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline"}
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 #Are genes affected by K36M-OE the same ones that change when we perturb NSD1 and/or NSD2?
 #k36mOE_v_nsd1ko <- get_dge_df(dds,"group","Cal27NSD1.KO","Cal27OE.K36M")
 #k36mOE_v_nsd2ko <- get_dge_df(dds,"group","Cal27NSD2.KO","Cal27OE.K36M")
@@ -492,6 +509,108 @@ volc(k36mOE_v_nsd2ko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
 ### K36M-OE v NSD.DKO
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 volc(k36mOE_v_nsdDko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
+```
+
+## Pathway analysis - upregulated {.tabset}
+
+Comparing NSD1.KO to K36M-OE, cell periphery is an enriched pathway, similar to when comparing NSD1.KO to NSD2.KO. 
+<p>&nbsp;</p>
+Comparing NSD.DKO to K36M-OE, overrepresentation of genes related to chromosome. 
+
+### K36M-OE v NSD1KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#pa_k36mOE_v_nsd1ko <- pathway_analysis(k36mOE_v_nsd1ko,2)
+load("~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsd1ko.RData")
+gostplot(pa_k36mOE_v_nsd1ko$up,capped = FALSE,interactive = TRUE)
+reactable(pa_k36mOE_v_nsd1ko$up_reactable)
+```
+
+### K36M-OE v NSD2KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#pa_k36mOE_v_nsd2ko <- pathway_analysis(k36mOE_v_nsd2ko,2)
+load("~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsd2ko.RData")
+#save(pa_k36mOE_v_nsd1ko,file="~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsd1ko.RData")
+gostplot(pa_k36mOE_v_nsd2ko$up,capped = FALSE,interactive = TRUE)
+reactable(pa_k36mOE_v_nsd2ko$up_reactable)
+```
+### K36M-OE v NSD.DKO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#pa_k36mOE_v_nsdDko <- pathway_analysis(k36mOE_v_nsdDko,2)
+load("~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsdDko.RData")
+gostplot(pa_k36mOE_v_nsdDko$up,capped = FALSE,interactive = TRUE)
+reactable(pa_k36mOE_v_nsdDko$up_reactable)
+```
+
+## Pathway analysis - downregulated {.tabset}
+
+Comparing downregulated NSD1.KO, NSD2.KO or NSD.DKO to K36M-OE, similar overrepresented pathways are found as when comparing NSD1.KO to NSD2.KO. Example: cellular structure development, cellular development
+
+### K36M-OE v NSD1KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(pa_k36mOE_v_nsd1ko$down,capped = FALSE,interactive = TRUE)
+reactable(pa_k36mOE_v_nsd1ko$down_reactable)
+```
+
+### K36M-OE v NSD2KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(pa_k36mOE_v_nsd2ko$down,capped = FALSE,interactive = TRUE)
+reactable(pa_k36mOE_v_nsd2ko$down_reactable)
+```
+
+### K36M-OE v NSD.DKO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(pa_k36mOE_v_nsdDko$down,capped = FALSE,interactive = TRUE)
+reactable(pa_k36mOE_v_nsdDko$down_reactable)
+```
+
+## GSEA {.tabset}
+
+NSD2.KO seems to have different enriched pathways in the downregulated genes: cholesterol homeostasis. NSD1KO and NSD.DKO compared to K36M-OE seems to have similarly enriched pathways.
+
+### K36M-OE v NSD1KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#gsea_k36mOE_v_NSD1KO <- gsea(k36mOE_v_nsd1ko)
+#save(gsea_k36mOE_v_NSD1KO,file="~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD1KO_cal27.RData")
+load("~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD1KO_cal27.RData")
+plot(gsea_k36mOE_v_NSD1KO$plot.r)
+gsea_k36mOE_v_NSD1KO$gsea_table
+```
+
+### K36M-OE v NSD2KO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#gsea_k36mOE_v_NSD2KO <- gsea(k36mOE_v_nsd2ko)
+#save(gsea_k36mOE_v_NSD2KO,file="~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD2KO_cal27.RData")
+load("~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD2KO_cal27.RData")
+plot(gsea_k36mOE_v_NSD2KO$plot.r)
+gsea_k36mOE_v_NSD2KO$gsea_table
+```
+
+### K36M-OE v NSD.DKO
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#gsea_k36mOE_v_NSD.DKO <- gsea(k36mOE_v_nsdDko)
+#save(gsea_k36mOE_v_NSD.DKO,file="~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD.DKO_cal27.RData")
+load("~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD.DKO_cal27.RData")
+plot(gsea_k36mOE_v_NSD.DKO$plot.r)
+gsea_k36mOE_v_NSD.DKO$gsea_table
+```
+
+## GSEA top hit {.tabset}
+
+Note: E2F targets genes that encode proteins involved in DNA replication.
+
+### K36M-OE v NSD1KO
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+plot(gsea_k36mOE_v_NSD1KO$top_hit)
+```
+
+### K36M-OE v NSD2KO
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+plot(gsea_k36mOE_v_NSD2KO$top_hit)
+```
+
+### K36M-OE v NSD.DKO
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+plot(gsea_k36mOE_v_NSD.DKO$top_hit)
 ```
 
 ## Overlapping DEGS {.tabset}
@@ -534,102 +653,6 @@ gostplot(k36m.OE_v_nsdDko$pa)
 reactable(k36m.OE_v_nsdDko$reactable)
 ```
 
-## Pathway analysis - upregulated {.tabset}
-
-For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline. Only DEGs with |log2FC|>2 & FDR < 0.05 were inputted. 
-
-### K36M-OE v NSD1KO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-#pa_k36mOE_v_nsd1ko <- pathway_analysis(k36mOE_v_nsd1ko,2)
-load("~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsd1ko.RData")
-gostplot(pa_k36mOE_v_nsd1ko$up,capped = FALSE,interactive = TRUE)
-reactable(pa_k36mOE_v_nsd1ko$up_reactable)
-```
-
-### K36M-OE v NSD2KO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-#pa_k36mOE_v_nsd2ko <- pathway_analysis(k36mOE_v_nsd2ko,2)
-load("~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsd2ko.RData")
-#save(pa_k36mOE_v_nsd1ko,file="~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsd1ko.RData")
-gostplot(pa_k36mOE_v_nsd2ko$up,capped = FALSE,interactive = TRUE)
-reactable(pa_k36mOE_v_nsd2ko$up_reactable)
-```
-### K36M-OE v NSD.DKO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-#pa_k36mOE_v_nsdDko <- pathway_analysis(k36mOE_v_nsdDko,2)
-load("~/Documents/Q005841_HNSCC/data/pa_k36mOE_v_nsdDko.RData")
-gostplot(pa_k36mOE_v_nsdDko$up,capped = FALSE,interactive = TRUE)
-reactable(pa_k36mOE_v_nsdDko$up_reactable)
-```
-
-## Pathway analysis - downregulated {.tabset}
-
-For all pairwise comparisons,Cal27OE.K36M is set as reference/baseline. Only DEGs with |log2FC|>2 & FDR < 0.05 were inputted.
-
-### K36M-OE v NSD1KO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-gostplot(pa_k36mOE_v_nsd1ko$down,capped = FALSE,interactive = TRUE)
-reactable(pa_k36mOE_v_nsd1ko$down_reactable)
-```
-
-### K36M-OE v NSD2KO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-gostplot(pa_k36mOE_v_nsd2ko$down,capped = FALSE,interactive = TRUE)
-reactable(pa_k36mOE_v_nsd2ko$down_reactable)
-```
-
-### K36M-OE v NSD.DKO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-gostplot(pa_k36mOE_v_nsdDko$down,capped = FALSE,interactive = TRUE)
-reactable(pa_k36mOE_v_nsdDko$down_reactable)
-```
-
-## GSEA {.tabset}
-
-### K36M-OE v NSD1KO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-#gsea_k36mOE_v_NSD1KO <- gsea(k36mOE_v_nsd1ko)
-#save(gsea_k36mOE_v_NSD1KO,file="~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD1KO_cal27.RData")
-load("~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD1KO_cal27.RData")
-plot(gsea_k36mOE_v_NSD1KO$plot.r)
-gsea_k36mOE_v_NSD1KO$gsea_table
-```
-
-### K36M-OE v NSD2KO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-#gsea_k36mOE_v_NSD2KO <- gsea(k36mOE_v_nsd2ko)
-#save(gsea_k36mOE_v_NSD2KO,file="~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD2KO_cal27.RData")
-load("~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD2KO_cal27.RData")
-plot(gsea_k36mOE_v_NSD2KO$plot.r)
-gsea_k36mOE_v_NSD2KO$gsea_table
-```
-
-### K36M-OE v NSD.DKO
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-#gsea_k36mOE_v_NSD.DKO <- gsea(k36mOE_v_nsdDko)
-#save(gsea_k36mOE_v_NSD.DKO,file="~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD.DKO_cal27.RData")
-load("~/Documents/Q005841_HNSCC/data/gsea_k36mOE_v_NSD.DKO_cal27.RData")
-plot(gsea_k36mOE_v_NSD.DKO$plot.r)
-gsea_k36mOE_v_NSD.DKO$gsea_table
-```
-
-## GSEA top hit {.tabset}
-
-### K36M-OE v NSD1KO
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
-plot(gsea_k36mOE_v_NSD1KO$top_hit)
-```
-
-### K36M-OE v NSD2KO
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
-plot(gsea_k36mOE_v_NSD2KO$top_hit)
-```
-
-### K36M-OE v NSD.DKO
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
-plot(gsea_k36mOE_v_NSD.DKO$top_hit)
-```
-
 ---
 
 <p>&nbsp;</p>
@@ -646,24 +669,6 @@ load("~/Documents/Q005841_HNSCC/data/det_k36mOE_v_nsd1ko.RData")
 ## Volcano
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 volc(det_k36mOE_v_nsd1ko,'log2FoldChange','padj',ylab = "-log10(FDR)",'')
-```
-
-## Overlapping DEGS {.tabset}
-
-Overlapping DEGs were obtained from K36M.OE against K36WT and NSD1KO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
-
-### Euler graphs
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-#need to do overlap pathway analysis before euler graph
-det_k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD1.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
-#
-get_euler_graph_for_two("K36M.OE","NSD1.KO",det_k36m.OE_v_nsd1ko$x1,det_k36m.OE_v_nsd1ko$x2,0.05)
-```
-
-### Pathway analysis
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
-gostplot(det_k36m.OE_v_nsd1ko$pa)
-reactable(det_k36m.OE_v_nsd1ko$reactable)
 ```
 
 ## Pathway analysis - upregulated
@@ -700,6 +705,24 @@ det_gsea_k36mOE_v_NSD1KO$gsea_table
 ## GSEA top hit
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 plot(det_gsea_k36mOE_v_NSD1KO$top_hit)
+```
+
+## Overlapping DEGS {.tabset}
+
+Overlapping DEGs were obtained from K36M.OE against K36WT and NSD1KO against K36WT. DEGs were obtained with the following criteria: padj < 0.05 & |log2FC| > 0.5
+
+### Euler graphs
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+#need to do overlap pathway analysis before euler graph
+det_k36m.OE_v_nsd1ko <- overlap_analysis(dds = dds,grouping = "group",cond1 = "Cal27OE.K36M",cond2 = "Cal27NSD1.KO",baseCond = "Cal27OE.K36WT",fc_cutoff = 0.5)
+#
+get_euler_graph_for_two("K36M.OE","NSD1.KO",det_k36m.OE_v_nsd1ko$x1,det_k36m.OE_v_nsd1ko$x2,0.05)
+```
+
+### Pathway analysis
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+gostplot(det_k36m.OE_v_nsd1ko$pa)
+reactable(det_k36m.OE_v_nsd1ko$reactable)
 ```
 
 ---

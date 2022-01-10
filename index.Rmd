@@ -203,7 +203,7 @@ gplots::heatmap.2(assay(rld.fadu.skn3)[select,], margins = c(10, 6),trace = "non
 
 # PCA: old and new HNSCC samples {.tabset .tabset-pills}
 ## All samples
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Top 500 most variably expressed genes used; Circles = new batch; Triangles = old batch"}
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="Top 500 most variably expressed genes used; Circles = new batch; Squares = old batch"}
 load("~/Documents/Q005841_HNSCC/data/oldNewHNSCC_dds.RData")
 load("~/Documents/Q005841_HNSCC/data/oldnewHNSCC_vst.RData")
 load("~/Documents/Q005841_HNSCC/data/oldNew_mdat.RData")
@@ -217,7 +217,10 @@ scores <- data.frame(pc$x, condition, batch)
 percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
 percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
 #plot
-plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+# text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)
+symbols <- c('circle','square')
+colors <- c('red','blue','green','black','purple','orange','gray','brown','yellowgreen','sienna1','olivedrab','maroon2','lightsteelblue','lightsalmon2','lightpink1','hotpink','chartreuse','azure','tan2','violet','turquoise1','aquamarine')
+plot_ly(scores,x=scores$PC1,y=scores$PC2,z=scores$PC3,color=factor(condition), symbol = factor(batch), symbols = symbols, colors = colors, hoverinfo = 'text', text = ~paste('</br>',rownames(scores),'</br>', condition,'</br>',batch)) %>% layout(scene = list(xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]), zaxis = list(title = percentage[3])))
 ```
 
 ## Cal27
@@ -234,8 +237,12 @@ batch <- cal27_mdat$batch
 scores <- data.frame(pc$x, condition, batch)
 percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
 percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
-#plot
-plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+#2d plot
+#plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+#3d plot
+symbols <- c('circle','square')
+colors <- c('red','blue','green','black','orange','gray','sienna4','yellowgreen','seagreen','olivedrab','maroon2','lightsteelblue','lightsalmon2','cadetblue','hotpink','chartreuse','azure','darkgoldenrod1','turquoise1','aquamarine','midnightblue','slateblue')
+plot_ly(scores,x=scores$PC1,y=scores$PC2,z=scores$PC3,color=factor(condition), symbol = factor(batch), symbols = symbols, colors = colors, hoverinfo = 'text', text = ~paste('</br>',rownames(scores),'</br>', condition,'</br>',batch)) %>% layout(scene = list(xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]), zaxis = list(title = percentage[3])))
 ```
 
 ## Detroit
@@ -252,8 +259,12 @@ batch <- detroit_cdat$batch
 scores <- data.frame(pc$x, condition,batch)
 percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
 percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
-#plot
-plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+#2d plot
+#plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter",symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+#3d plot
+symbols <- c('circle','square')
+colors <- c('red','blue','green','black','orange','gray','sienna4','yellowgreen','seagreen','olivedrab','maroon2','lightsteelblue','lightsalmon2','cadetblue','hotpink','chartreuse','azure','darkgoldenrod1','turquoise1','aquamarine','midnightblue','slateblue')
+plot_ly(scores,x=scores$PC1,y=scores$PC2,z=scores$PC3,color=factor(condition), symbol = factor(batch), symbols = symbols, colors = colors, hoverinfo = 'text', text = ~paste('</br>',rownames(scores),'</br>', condition,'</br>',batch)) %>% layout(scene = list(xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]), zaxis = list(title = percentage[3])))
 ```
 ## FaDu
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
@@ -269,8 +280,12 @@ batch <- fadu_skn3_cdat$batch
 scores <- data.frame(pc$x, condition,batch)
 percentage <- round(pc$sdev / sum(pc$sdev) * 100, 2)
 percentage <- paste( colnames(scores), "(", paste( as.character(percentage), "%", ")", sep="") )
-#plot
-plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter", symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+#2d plot
+#plot_ly(scores,x=scores$PC1,y=scores$PC2,text=rownames(scores),mode="markers",color=factor(condition),marker=list(size=11),colors = "Paired",type="scatter", symbol=factor(batch)) %>% layout(title="",   xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]))
+#3d plot
+symbols <- c('circle','square')
+colors <- c('red','blue','green','black','orange','gray','sienna4','yellowgreen','seagreen','olivedrab','maroon2','lightsteelblue','lightsalmon2','cadetblue','hotpink','chartreuse','azure','darkgoldenrod1','turquoise1','aquamarine','midnightblue','slateblue')
+plot_ly(scores,x=scores$PC1,y=scores$PC2,z=scores$PC3,color=factor(condition), symbol = factor(batch), symbols = symbols, colors = colors, hoverinfo = 'text', text = ~paste('</br>',rownames(scores),'</br>', condition,'</br>',batch)) %>% layout(scene = list(xaxis = list(title = percentage[1]),yaxis = list(title = percentage[2]), zaxis = list(title = percentage[3])))
 ```
 ## {-}
 # Hierarchical clustering: old and new HNSCC samples {.tabset .tabset-pills}

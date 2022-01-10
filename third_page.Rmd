@@ -1,0 +1,153 @@
+---
+title: ""
+author: ""
+date: ""
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(gridExtra)
+library(grid)
+library(cowplot)
+library(reactable)
+library(data.table)
+library(reticulate)
+library(sciplot)
+library(plotly)
+library(matrixStats)
+library(SummarizedExperiment)
+library(RColorBrewer)
+library(heatmaply)
+library(ggrepel)
+library(tidyverse)
+library(gprofiler2)
+library(patchwork)
+library(DESeq2)
+library(apeglm)
+library(fgsea)
+library(msigdbr)
+library(compiler)
+library(shiny)
+library(tippy)
+library(msigdbr)
+library(GSVA)
+library(pals)
+library(ggtext)
+library(broom)
+library(DT)
+library(EnsDb.Hsapiens.v79)
+library(org.Hs.eg.db)
+library(eulerr)
+library(GeneOverlap)
+#load RData
+load("~/Documents/Q005841_HNSCC/work/processed_dat/dds_Dec2021_hnscc.RData")
+load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
+```
+
+```{r include= FALSE}
+get_dge_df <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
+  df <- dds %>%
+    results(contrast = c(group,sampA,ref_sampB)) %>%
+    data.frame() %>%
+    na.omit() %>%
+    rownames_to_column('ensembl_gene_id')
+  geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=df$ensembl_gene_id, keytype = "GENEID", columns = c("SYMBOL","GENEID")) #this gets human gene symbols for ensembl gene ids
+  colnames(geneSym) <- c("gene","ensembl_gene_id")
+  df_final <- full_join(df,geneSym,by="ensembl_gene_id")
+  return(df_final)
+})
+#
+volc <- function(r, x, y, ylab, ttl) {
+  d <- as.data.frame(r) %>%
+    dplyr::rename(x = !!x, y = !!y) %>%
+    mutate(kind = case_when((abs(x) > 2 & y < .05) ~ 'DE',
+                            abs(x) > 2 ~ '|logFC|>2',
+                            y < .05 ~ 'FDR<0.05',
+                            T ~ 'NS'),
+           y = -log10(y))
+  ct <- d %>% 
+    dplyr::filter(kind == 'DE') %>%
+    mutate(up = x > 0) %>%
+    dplyr::count(up) %>%
+    mutate(x = ifelse(up, Inf, -Inf),
+           y = Inf,
+           h = as.numeric(up))
+  ggplot(d, aes(x, y, color = kind)) +
+    geom_vline(xintercept = c(-2, 2), linetype = 'dashed') +
+    geom_hline(yintercept = -log10(0.05), linetype = 'dashed') +
+    geom_point(alpha = .5) +
+    geom_label(aes(x = x, y = y, label = n, hjust = h),
+              vjust = 1, data = ct, inherit.aes = F) +
+     geom_text_repel(aes(label = gene), data = subset(d, kind == "DE"),max.overlaps = 10,show.legend = F, min.segment.length = 0) + scale_y_continuous() +
+    scale_color_manual(values = c('orange','forestgreen', 'red',  'black')) +
+    labs(x = x, y = ylab, title = ttl) + theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        legend.title = element_blank())
+}
+###overlap analysis###
+overlap_analysis <- cmpfun(function(dds,grouping,cond1,cond2,baseCond,fc_cutoff){ #x is dge df; bg = background list
+  x1 <- get_dge_df(dds,grouping,cond1,baseCond) 
+  x2 <- get_dge_df(dds,grouping,cond2,baseCond)
+  bg <- rbind(x1,x2)
+  bg <- bg$ensembl_gene_id
+  bg <- bg[!duplicated(bg)]
+  go.obj <- newGeneOverlap(x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > fc_cutoff],x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > fc_cutoff],genome.size=length(bg),spec="hg19.gene")
+go.obj <- testGeneOverlap(go.obj)
+  pa <- gost(go.obj@intersection,
+             organism = 'hsapiens',
+             custom_bg = bg,
+             user_threshold = 0.05,
+             significant = TRUE,
+             evcodes = TRUE,
+             exclude_iea = TRUE,
+             correction_method = "fdr",
+             sources = c("GO","KEGG"))
+  reactable <- pa$result %>%
+    dplyr::select(source, term_name, intersection_size, p_value) %>% 
+  arrange(p_value) %>%
+  setNames(c("Source","Pathway","Number of Genes","FDR"))
+  return(list(x1=x1,x2=x2,go.obj=go.obj,pa=pa,reactable=reactable))
+})
+###eulergraph for 3 groups###
+get_euler_graph <- function(ttl1,ttl2,ttl3,ttl4,x1,x2,x3,x4,logfc_cutoff){
+x <- list(c1 = x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > logfc_cutoff],c2 = x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > logfc_cutoff],c3 = x3$ensembl_gene_id[x3$padj < .05 & abs(x3$log2FoldChange) > logfc_cutoff],c4 = x4$ensembl_gene_id[x4$padj < .05 & abs(x4$log2FoldChange) > logfc_cutoff])
+names(x) <- c(ttl1,ttl2,ttl3,ttl4)
+p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+return(p)
+}
+###eulergraph for 2 groups####
+get_euler_graph_for_two <- function(ttl1,ttl2,x1,x2,logfc_cutoff){
+x <- list(c1 = x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > logfc_cutoff],c2 = x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > logfc_cutoff])
+names(x) <- c(ttl1,ttl2)
+p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+return(p)
+}
+```
+
+# Cal27: NSD2.KO vs NSD1.KO {.tabset .tabset-pills}
+
+<b> NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05 </b>
+
+We find more upregulated genes in NSD2.KO than downregulated ones. However, overrepresentation of similar pathways are found in upregulated and downregulated genes, such as cell periphery and multicellular organismal process. However, downregulated genes are also enriched in pathways in cancer & calcium signaling.
+
+## Volcano
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#How does NSD2-KO differ from NSD1-KO?
+#resLFC_cal27_nsd1v2 <- lfcShrink(dds, contrast = c('group', 'Cal27NSD2.KO', 'Cal27NSD1.KO'), type = 'normal')
+load("~/Documents/Q005841_HNSCC/data/rd_cal27_nsd1v2.RData")
+#volcano plot
+volc(rd_cal27,'log2FoldChange','padj','-log10(FDR)','')
+```
+

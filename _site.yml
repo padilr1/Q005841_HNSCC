@@ -4,6 +4,8 @@ navbar:
   left:
     - text: "QC"
       href: index.html
-    - text: "DGE Analysis"
+    - text: "DGE Analysis: Part 1"
       href: second_page.html
+    - text: "DGE Analysis: Part 2"
+      href: third_page.html
 output_dir: "docs"

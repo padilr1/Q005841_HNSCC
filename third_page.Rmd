@@ -49,9 +49,14 @@ library(org.Hs.eg.db)
 library(eulerr)
 library(GeneOverlap)
 #load RData
-load("~/Documents/Q005841_HNSCC/work/processed_dat/dds_Dec2021_hnscc.RData")
-load("~/Documents/Q005841_HNSCC/work/processed_dat/rld_hnscc_Dec2021.RData")
+load("~/Documents/Q005841_HNSCC/data/oldNewHNSCC_dds_V2.RData")
 ```
+
+Only added the old batch's parental because when old and new batches are mixed, many genes (~25440) are flagged as outliers by DEseq.
+<p>&nbsp;</p>
+DEseq2 defines outliers with respect to the fitted coefficients and the expected values, which change when you introduce covariates, such as batch, to account for more differences. 
+<p>&nbsp;</p>
+Cook's distance: Data points with large residuals (outliers) and/or high leverage may distort the outcome and accuracy of a regression. Cook's distance measures the effect of deleting a given observation. Points with a large Cook's distance are considered to merit closer examination in the analysis.
 
 ```{r include= FALSE}
 get_dge_df <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
@@ -138,16 +143,24 @@ return(p)
 
 # Cal27: NSD2.KO vs NSD1.KO {.tabset .tabset-pills}
 
-<b> NSD1.KO is set as baseline/reference. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05 </b>
+<b> NSD1/2 KO compared against parental. Cutoff for DEGs: abs(FC) > 2 & padj < 0.05 </b>
 
-We find more upregulated genes in NSD2.KO than downregulated ones. However, overrepresentation of similar pathways are found in upregulated and downregulated genes, such as cell periphery and multicellular organismal process. However, downregulated genes are also enriched in pathways in cancer & calcium signaling.
+## Volcano {.tabset }
 
-## Volcano
-```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
-#How does NSD2-KO differ from NSD1-KO?
-#resLFC_cal27_nsd1v2 <- lfcShrink(dds, contrast = c('group', 'Cal27NSD2.KO', 'Cal27NSD1.KO'), type = 'normal')
-load("~/Documents/Q005841_HNSCC/data/rd_cal27_nsd1v2.RData")
-#volcano plot
-volc(rd_cal27,'log2FoldChange','padj','-log10(FDR)','')
+### NSD1KO v Par
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="2 reps from old & 2 reps from new for NSD1KO; NSD2KO only comes from new batch; Parental is one rep from old, two from new (K36WT defined as parental)"}
+#Biological question: What differences/similarities are there in the transcriptome when we knockout NSD1 vs NSD2?
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_nsd1ko_v_par <- get_dge_df(dds,"group","Cal27NSD1KO","Cal27Parental")
+
+volc(rd_cal27_nsd1ko_v_par,'log2FoldChange','padj','-log10(FDR)','')
 ```
 
+### NSD2KO v Par
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="2 reps from old & 2 reps from new for NSD1KO; NSD2KO only comes from new batch; Parental is one rep from old, two from new (K36WT defined as parental)"}
+#Biological question: What differences/similarities are there in the transcriptome when we knockout NSD1 vs NSD2?
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_nsd2ko_v_par <- get_dge_df(dds,"group","Cal27NSD2KO","Cal27Parental")
+
+volc(rd_cal27_nsd1ko_v_par,'log2FoldChange','padj','-log10(FDR)','')
+```

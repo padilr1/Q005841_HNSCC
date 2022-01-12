@@ -4,6 +4,8 @@ navbar:
   left:
     - text: "QC"
       href: index.html
+    - text: "Batch DGE Analysis"
+      href: batch_analysis.html
     - text: "DGE Analysis: Part 1"
       href: second_page.html
     - text: "DGE Analysis: Part 2"

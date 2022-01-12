@@ -246,6 +246,9 @@ plot_ly(scores,x=scores$PC1,y=scores$PC2,z=scores$PC3,color=factor(condition), s
 ```
 
 ## Detroit
+
+There seems to be a clearer separation between batches in the Detroit cell line than in Cal27, even in the parental samples.
+
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 vst.detroit <- vst[ , vst$cell_line %in% c("Detroit")]
 detroit_cdat <- hnscc_oldNew_mdat %>%

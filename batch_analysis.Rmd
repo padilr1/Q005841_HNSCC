@@ -1,0 +1,385 @@
+---
+title: ""
+author: ""
+date: ""
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(gridExtra)
+library(grid)
+library(cowplot)
+library(reactable)
+library(data.table)
+library(reticulate)
+library(sciplot)
+library(plotly)
+library(matrixStats)
+library(SummarizedExperiment)
+library(RColorBrewer)
+library(heatmaply)
+library(ggrepel)
+library(tidyverse)
+library(gprofiler2)
+library(patchwork)
+library(DESeq2)
+library(apeglm)
+library(fgsea)
+library(msigdbr)
+library(compiler)
+library(shiny)
+library(tippy)
+library(msigdbr)
+library(GSVA)
+library(pals)
+library(ggtext)
+library(broom)
+library(DT)
+library(EnsDb.Hsapiens.v79)
+library(org.Hs.eg.db)
+library(eulerr)
+library(GeneOverlap)
+#load RData
+load("~/Documents/Q005841_HNSCC/data/dds_cal27_mixed.RData")
+```
+
+```{r include= FALSE}
+get_dge_df <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
+  df <- dds %>%
+    results(contrast = c(group,sampA,ref_sampB)) %>%
+    data.frame() %>%
+    na.omit() %>%
+    rownames_to_column('ensembl_gene_id')
+  geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=df$ensembl_gene_id, keytype = "GENEID", columns = c("SYMBOL","GENEID")) #this gets human gene symbols for ensembl gene ids
+  colnames(geneSym) <- c("gene","ensembl_gene_id")
+  df_final <- full_join(df,geneSym,by="ensembl_gene_id")
+  return(df_final)
+})
+#
+volc <- function(r, x, y, ylab, ttl) {
+  d <- as.data.frame(r) %>%
+    dplyr::rename(x = !!x, y = !!y) %>%
+    mutate(kind = case_when((abs(x) > 2 & y < .05) ~ 'DE',
+                            abs(x) > 2 ~ '|logFC|>2',
+                            y < .05 ~ 'FDR<0.05',
+                            T ~ 'NS'),
+           y = -log10(y))
+  ct <- d %>% 
+    dplyr::filter(kind == 'DE') %>%
+    mutate(up = x > 0) %>%
+    dplyr::count(up) %>%
+    mutate(x = ifelse(up, Inf, -Inf),
+           y = Inf,
+           h = as.numeric(up))
+  ggplot(d, aes(x, y, color = kind)) +
+    geom_vline(xintercept = c(-2, 2), linetype = 'dashed') +
+    geom_hline(yintercept = -log10(0.05), linetype = 'dashed') +
+    geom_point(alpha = .5) +
+    geom_label(aes(x = x, y = y, label = n, hjust = h),
+              vjust = 1, data = ct, inherit.aes = F) +
+     geom_text_repel(aes(label = gene), data = subset(d, kind == "DE"),max.overlaps = 10,show.legend = F, min.segment.length = 0) + scale_y_continuous() +
+    scale_color_manual(values = c('orange','forestgreen', 'red',  'black')) +
+    labs(x = x, y = ylab, title = ttl) + theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        legend.title = element_blank())
+}
+###overlap analysis###
+overlap_analysis <- cmpfun(function(dds,grouping,cond1,cond2,baseCond,fc_cutoff){ #x is dge df; bg = background list
+  x1 <- get_dge_df(dds,grouping,cond1,baseCond) 
+  x2 <- get_dge_df(dds,grouping,cond2,baseCond)
+  bg <- rbind(x1,x2)
+  bg <- bg$ensembl_gene_id
+  bg <- bg[!duplicated(bg)]
+  go.obj <- newGeneOverlap(x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > fc_cutoff],x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > fc_cutoff],genome.size=length(bg),spec="hg19.gene")
+go.obj <- testGeneOverlap(go.obj)
+  pa <- gost(go.obj@intersection,
+             organism = 'hsapiens',
+             custom_bg = bg,
+             user_threshold = 0.05,
+             significant = TRUE,
+             evcodes = TRUE,
+             exclude_iea = TRUE,
+             correction_method = "fdr",
+             sources = c("GO","KEGG"))
+  reactable <- pa$result %>%
+    dplyr::select(source, term_name, intersection_size, p_value) %>% 
+  arrange(p_value) %>%
+  setNames(c("Source","Pathway","Number of Genes","FDR"))
+  return(list(x1=x1,x2=x2,go.obj=go.obj,pa=pa,reactable=reactable))
+})
+```
+
+```{r ,include=FALSE}
+#euler graphs for overlapping genes
+#rd1 and rd2 are dataframes from results(dds)
+get_euler_graph <- function(numOfComparisons,upregulated=TRUE,logfc_cutoff,ttl1,ttl2,rd1,rd2, ...){
+  if(numOfComparisons == 2 & upregulated == TRUE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > logfc_cutoff],c2 =
+    rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > logfc_cutoff])
+    names(x) <- c(ttl1,ttl2)
+    p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+  #
+  if(numOfComparisons == 2 & upregulated == FALSE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -logfc_cutoff],c2 =
+    rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -logfc_cutoff])
+    names(x) <- c(ttl1,ttl2)
+    p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+  #
+  if(numOfComparisons == 3 & upregulated == TRUE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > logfc_cutoff],c2 = rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > logfc_cutoff],c3 = rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) > logfc_cutoff],c4 = rd4$ensembl_gene_id[rd4$padj < .05 & (rd4$log2FoldChange) > logfc_cutoff])
+    names(x) <- c(ttl1,ttl2,ttl3,ttl4)
+    p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+    if(numOfComparisons == 3 & upregulated == FALSE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -logfc_cutoff],c2 = rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -logfc_cutoff],c3 = rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) < -logfc_cutoff],c4 = rd4$ensembl_gene_id[rd4$padj < .05 & (rd4$log2FoldChange) < -logfc_cutoff])
+    names(x) <- c(ttl1,ttl2,ttl3,ttl4)
+    p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+}
+# intersect scatterplot; reindent code lines : command i
+# type refers to all, upregulated, downregulated
+get_intersect_sctr_plt <- function(type,rd1,rd2,xlab,ylab){
+  if(type == "all"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #merge the two DFs
+    combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
+    #get scatterplot of log2FC
+    p <- combined %>%
+      ggplot(aes(x = log2FoldChange.x, y = log2FoldChange.y)) +
+      geom_point() +
+      geom_smooth(method="lm") +
+      stat_cor(method = "pearson", cor.coef.name = "R") +
+      labs(title = "",x= xlab,y= ylab) +
+      theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank())
+    return(p)
+  }
+  if(type == "upregulated"){
+        #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > 2],rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > 2])
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #merge the two DFs
+    combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
+    #get scatterplot of log2FC
+    p <- combined %>%
+      ggplot(aes(x = log2FoldChange.x, y = log2FoldChange.y)) +
+      geom_point() +
+      geom_smooth(method="lm") +
+      stat_cor(method = "pearson", cor.coef.name = "R") +
+      labs(title = "",x= xlab,y= ylab) +
+      theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank())
+    return(p)
+  }
+  if(type == "downregulated"){
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -2],rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -2])
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #merge the two DFs
+    combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
+    #get scatterplot of log2FC
+    p <- combined %>%
+      ggplot(aes(x = log2FoldChange.x, y = log2FoldChange.y)) +
+      geom_point() +
+      geom_smooth(method="lm") +
+      stat_cor(method = "pearson", cor.coef.name = "R") +
+      labs(title = "",x= xlab,y= ylab) +
+      theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank())
+    return(p)
+  }
+}
+```
+
+# Direct comparisons {.tabset }
+
+<b> Cutoff for DEGs: abs(FC) > 2 & padj < 0.05. Old batch set as baseline. </b>
+
+Direct comparisons were performed as a sanity check to determine how many genes are differentially expressed between the two batches. 
+
+## Parental
+
+In the new batch, OE.K36WT was included as another replicate for parental. In the old batch, K36R was included as another replicate for parental to avoid 1v1 comparisons. 
+
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_newVold_par <- get_dge_df(dds,"group","newParental","oldParental")
+volc(rd_cal27_newVold_par,'log2FoldChange','padj','-log10(FDR)','')
+```
+
+## NSD1KO
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_newVold_nsd1ko <- get_dge_df(dds,"group","newNSD1KO","oldNSD1KO")
+volc(rd_cal27_newVold_nsd1ko ,'log2FoldChange','padj','-log10(FDR)','')
+```
+
+## NSD.DKO
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_oldVnew_nsdDko <- get_dge_df(dds,"group","newNSD.DKO","oldNSD.DKO")
+volc(rd_cal27_oldVnew_nsdDko,'log2FoldChange','padj','-log10(FDR)','')
+```
+
+# Relative to parental {.tabset }
+
+<b> Proportional changes in gene expression in NSD1KO & NSD.DKO between the two batches. However, when we use the cutoff for DEGs (padj < 0.05 & |log2FC| > 2), we observe greater number of DEGs in the old batch than in the new batch. </b>
+
+## NSD1KO v parental {.tabset .tabset-pills}
+
+### All 26613 genes
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="For the same gene, we're looking at the log2FC of NSD1KO compared to parental."}
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_new_nsd1ko_v_par <- get_dge_df(dds,"group","newNSD1KO","newParental")
+rd_cal27_old_nsd1ko_v_par <- get_dge_df(dds,"group","oldNSD1KO","oldParental")
+#take intersect
+intersect_genes_all <- base::intersect(rd_cal27_new_nsd1ko_v_par$ensembl_gene_id,rd_cal27_old_nsd1ko_v_par$ensembl_gene_id)
+#get DF intersect in new batch
+rd_cal27_new_nsd1ko_intersect <- rd_cal27_new_nsd1ko_v_par[rd_cal27_new_nsd1ko_v_par$ensembl_gene_id %in% intersect_genes_all,]
+colnames(rd_cal27_new_nsd1ko_intersect)[colnames(rd_cal27_new_nsd1ko_intersect)=='log2FoldChange'] <- 'newBatch_log2FoldChange'
+#get DF intersect in old batch
+rd_cal27_old_nsd1ko_intersect <- rd_cal27_old_nsd1ko_v_par[rd_cal27_old_nsd1ko_v_par$ensembl_gene_id %in% intersect_genes_all,]
+colnames(rd_cal27_old_nsd1ko_intersect)[colnames(rd_cal27_old_nsd1ko_intersect)=='log2FoldChange'] <- 'oldBatch_log2FoldChange'
+#merge the two DFs
+combined_newold_nsd1ko_intersect <- dplyr::right_join(rd_cal27_new_nsd1ko_intersect,rd_cal27_old_nsd1ko_intersect,by="ensembl_gene_id")
+#get scatterplot of log2FC
+combined_newold_nsd1ko_intersect %>%
+  ggplot(aes(x = newBatch_log2FoldChange, y = oldBatch_log2FoldChange)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  stat_cor(method = "pearson", cor.coef.name = "R") +
+  labs(title = "",x="New batch log2FC NSD1KO v Parental",y="Old batch log2FC NSD1KO v Parental") +
+  theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+```
+
+### Only DEGs {.tabset .tabset-pills}
+
+<b> Cutoff for DEGs: abs(FC) > 2 & padj < 0.05. </b>
+
+Fewer overlapping upregulated genes between the two batches. However, greater correlation in log2FC in upregulated DEGs than downregulated DEGs. 
+
+#### Upregulated
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#format dataType_cellline_cond1_v_cond2
+get_euler_graph(2,upregulated=TRUE,2,"newNSD1KO","oldNSD1KO",rd_cal27_new_nsd1ko_v_par,rd_cal27_old_nsd1ko_v_par)
+#get intersecting DEGs
+intersect_genes_degs <- base::intersect(rd_cal27_new_nsd1ko_v_par$ensembl_gene_id[rd_cal27_new_nsd1ko_v_par $padj < .05 & (rd_cal27_new_nsd1ko_v_par$log2FoldChange) > 2],rd_cal27_old_nsd1ko_v_par$ensembl_gene_id[rd_cal27_old_nsd1ko_v_par$padj < .05 & (rd_cal27_old_nsd1ko_v_par$log2FoldChange) > 2])
+#get intersect DFs
+rd_cal27_new_nsd1ko_intersect <- rd_cal27_new_nsd1ko_v_par[rd_cal27_new_nsd1ko_v_par$ensembl_gene_id %in% intersect_genes_degs,]
+colnames(rd_cal27_new_nsd1ko_intersect)[colnames(rd_cal27_new_nsd1ko_intersect)=='log2FoldChange'] <- 'newBatch_log2FoldChange'
+rd_cal27_old_nsd1ko_intersect <- rd_cal27_old_nsd1ko_v_par[rd_cal27_old_nsd1ko_v_par$ensembl_gene_id %in% intersect_genes_degs,]
+colnames(rd_cal27_old_nsd1ko_intersect)[colnames(rd_cal27_old_nsd1ko_intersect)=='log2FoldChange'] <- 'oldBatch_log2FoldChange'
+#merge intersect DFs
+combined_newold_nsd1ko_intersect <- dplyr::right_join(rd_cal27_new_nsd1ko_intersect,rd_cal27_old_nsd1ko_intersect,by="ensembl_gene_id")
+combined_newold_nsd1ko_intersect %>%
+  ggplot(aes(x = newBatch_log2FoldChange, y = oldBatch_log2FoldChange)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  stat_cor(method = "pearson", cor.coef.name = "R") +
+  labs(title = "",x="New batch log2FC NSD1KOvPar",y="Old Batch log2FC NSD1KOvPar") +
+  theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+```
+
+#### Downregulated
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#format dataType_cellline_cond1_v_cond2
+get_euler_graph(numOfComparisons = 2,upregulated = FALSE,logfc_cutoff = 2,ttl1 = "newNSD1KO",ttl2 = "oldNSD1KO",rd1 = rd_cal27_new_nsd1ko_v_par,rd2 = rd_cal27_old_nsd1ko_v_par)
+#get intersecting DEGs
+intersect_genes_degs <- base::intersect(rd_cal27_new_nsd1ko_v_par$ensembl_gene_id[rd_cal27_new_nsd1ko_v_par $padj < .05 & (rd_cal27_new_nsd1ko_v_par$log2FoldChange) < -2],rd_cal27_old_nsd1ko_v_par$ensembl_gene_id[rd_cal27_old_nsd1ko_v_par $padj < .05 & (rd_cal27_old_nsd1ko_v_par$log2FoldChange) < -2])
+#get intersect DFs
+rd_cal27_new_nsd1ko_intersect <- rd_cal27_new_nsd1ko_v_par[rd_cal27_new_nsd1ko_v_par$ensembl_gene_id %in% intersect_genes_degs,]
+colnames(rd_cal27_new_nsd1ko_intersect)[colnames(rd_cal27_new_nsd1ko_intersect)=='log2FoldChange'] <- 'newBatch_log2FoldChange'
+rd_cal27_old_nsd1ko_intersect <- rd_cal27_old_nsd1ko_v_par[rd_cal27_old_nsd1ko_v_par$ensembl_gene_id %in% intersect_genes_degs,]
+colnames(rd_cal27_old_nsd1ko_intersect)[colnames(rd_cal27_old_nsd1ko_intersect)=='log2FoldChange'] <- 'oldBatch_log2FoldChange'
+#merge intersect DFs
+combined_newold_nsd1ko_intersect <- dplyr::right_join(rd_cal27_new_nsd1ko_intersect,rd_cal27_old_nsd1ko_intersect,by="ensembl_gene_id")
+combined_newold_nsd1ko_intersect %>%
+  ggplot(aes(x = newBatch_log2FoldChange, y = oldBatch_log2FoldChange)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  stat_cor(method = "pearson", cor.coef.name = "R") +
+  labs(title = "",x="New batch log2FC NSD1KOvPar",y="Old Batch log2FC NSD1KOvPar") +
+  theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+```
+
+## NSD.DKO v parental {.tabset .tabset-pills}
+
+### All 27461 genes
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%',fig.cap="For the same gene, we're looking at the log2FC of NSD.DKO compared to parental."}
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_new_nsdDko_v_par <- get_dge_df(dds,"group","newNSD.DKO","newParental")
+rd_cal27_old_nsdDko_v_par <- get_dge_df(dds,"group","oldNSD.DKO","oldParental")
+
+get_intersect_sctr_plt(type = "all",rd1 = rd_cal27_new_nsdDko_v_par,rd2 = rd_cal27_old_nsdDko_v_par,xlab = "New batch log2FC NSD.DKO v Parental",ylab="Old batch log2FC NSD.DKO v Parental")
+```
+
+### DEGs only {.tabset .tabset-pills}
+
+#### Upregulated
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+get_euler_graph(numOfComparisons = 2,upregulated = TRUE,logfc_cutoff = 2,"NewBatch_NSD.DKO","OldBatch_NSD.DKO",rd_cal27_new_nsdDko_v_par,rd_cal27_old_nsdDko_v_par)
+
+get_intersect_sctr_plt("upregulated",rd_cal27_new_nsdDko_v_par,rd_cal27_old_nsdDko_v_par,xlab = "New Batch log2FC NSD.DKO v Parental","Old Batch log2FC NSD.DKO v Parental")
+```
+
+#### Downregulated
+```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+get_euler_graph(numOfComparisons = 2,upregulated = FALSE,logfc_cutoff = 2,"NewBatch_NSD.DKO","OldBatch_NSD.DKO",rd_cal27_new_nsdDko_v_par,rd_cal27_old_nsdDko_v_par)
+
+get_intersect_sctr_plt("downregulated",rd_cal27_new_nsdDko_v_par,rd_cal27_old_nsdDko_v_par,xlab = "New Batch log2FC NSD.DKO v Parental","Old Batch log2FC NSD.DKO v Parental")
+```

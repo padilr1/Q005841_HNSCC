@@ -854,7 +854,7 @@ get_intersect_list("down", rd_cal27_nsd1ko_v_par,rd_cal27_nsd2ko_v_par,rd_cal27_
 
 To avoid computing strict overlaps, we can compare things at a pathway level by computing ssGSEA scores for some previously enriched pathways, such as those related to metabolism or neurogenesis. The only consistent trend for the two pathways checked appears to be the inactivation of oxidative phosphorylation (Warburg effect?) upon the ablation of NSD1 or both NSD1 and NSD2, but not when K27M-KO is already removed, though this could also be a batch effect.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE,out.width='100%',fig.width=3,fig.height=5,dev='svg'}
+```{r include=FALSE}
 ps <- msigdbr(species = "Homo sapiens") %>%
   mutate(cat = paste0(gs_cat, '.', gs_subcat) %>% 
            sub('\\.$', '', .)) %>% 
@@ -895,7 +895,10 @@ m <- assay(vsd) %>%
   {.[apply(., 1, sd) > 0,]}
 
 r <- gsva(m, pps)
+```
 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,out.width='100%'}
 r %>% as.data.frame() %>% 
   rownames_to_column('pathway') %>%
   pivot_longer(-pathway, names_to = 'samp', values_to = 'score') %>%

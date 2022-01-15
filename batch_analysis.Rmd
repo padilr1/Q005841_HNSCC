@@ -187,7 +187,7 @@ get_intersect_sctr_plt <- function(type,rd1,rd2,xlab,ylab){
     #get DGE df for sample 1
     rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
     #get DGE df for sample 2
-    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    rd2_df <- rd2[rd2$ensembl_gene_id %in% gene_overlap,]
     #merge the two DFs
     combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
     #get scatterplot of log2FC
@@ -210,7 +210,7 @@ get_intersect_sctr_plt <- function(type,rd1,rd2,xlab,ylab){
     #get DGE df for sample 1
     rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
     #get DGE df for sample 2
-    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    rd2_df <- rd2[rd2$ensembl_gene_id %in% gene_overlap,]
     #merge the two DFs
     combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
     #get scatterplot of log2FC
@@ -235,8 +235,6 @@ get_intersect_sctr_plt <- function(type,rd1,rd2,xlab,ylab){
 
 <b> Cutoff for DEGs: abs(FC) > 2 & padj < 0.05. Old batch set as baseline. </b>
 
-Direct comparisons were performed as a sanity check to determine how many genes are differentially expressed between the two batches. 
-
 ## Parental
 
 In the new batch, OE.K36WT was included as another replicate for parental. In the old batch, K36R was included as another replicate for parental to avoid 1v1 comparisons. 
@@ -244,26 +242,26 @@ In the new batch, OE.K36WT was included as another replicate for parental. In th
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 #format dataType_cellline_cond1_v_cond2
 rd_cal27_newVold_par <- get_dge_df(dds,"group","newParental","oldParental")
-volc(rd_cal27_newVold_par,'log2FoldChange','padj','-log10(FDR)','')
+volc(rd_cal27_newVold_par,'log2FoldChange','padj','-log10(FDR)','New vs Old Batch Parentals')
 ```
 
 ## NSD1KO
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 #format dataType_cellline_cond1_v_cond2
 rd_cal27_newVold_nsd1ko <- get_dge_df(dds,"group","newNSD1KO","oldNSD1KO")
-volc(rd_cal27_newVold_nsd1ko ,'log2FoldChange','padj','-log10(FDR)','')
+volc(rd_cal27_newVold_nsd1ko ,'log2FoldChange','padj','-log10(FDR)','New vs Old Batch NSD1KO')
 ```
 
 ## NSD.DKO
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 #format dataType_cellline_cond1_v_cond2
 rd_cal27_oldVnew_nsdDko <- get_dge_df(dds,"group","newNSD.DKO","oldNSD.DKO")
-volc(rd_cal27_oldVnew_nsdDko,'log2FoldChange','padj','-log10(FDR)','')
+volc(rd_cal27_oldVnew_nsdDko,'log2FoldChange','padj','-log10(FDR)','New vs Old Batch NSD.DKO')
 ```
 
 # Relative to parental {.tabset }
 
-<b> Proportional changes in gene expression in NSD1KO & NSD.DKO between the two batches. However, when we use the cutoff for DEGs (padj < 0.05 & |log2FC| > 2), we observe greater number of DEGs in the old batch than in the new batch. </b>
+<b> We observe moderate correlation in gene expression changes between new and old batch NSD1KO. However, we observe a fairly weak correlation between new and old batch NSD.DKO. There are greater number of DEGs in the old batch than in the new batch. </b>
 
 ## NSD1KO v parental {.tabset .tabset-pills}
 

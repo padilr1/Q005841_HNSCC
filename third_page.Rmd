@@ -852,6 +852,8 @@ get_intersect_list("down", rd_cal27_nsd1ko_v_par,rd_cal27_nsd2ko_v_par,rd_cal27_
 
 # ssGSEA 
 
+We observe high ssGSEA score for NSD.DKO and 1 sample of NSD.1KO. However, unexpectedly, we also observe a similarly high ssGSEA score for Cal27_OE.K36WT (which resembled parental samples in the PCA). 
+
 ```{r include=FALSE}
 #To avoid computing strict overlaps, we can compare things at a pathway level by computing ssGSEA scores for some previously enriched pathways, such as those related to metabolism or neurogenesis. The only consistent trend for the two pathways checked appears to be the inactivation of oxidative phosphorylation (Warburg effect?) upon the ablation of NSD1 or both NSD1 and NSD2, but not when K27M-KO is already removed, though this could also be a batch effect.
 ps <- msigdbr(species = "Homo sapiens") %>%

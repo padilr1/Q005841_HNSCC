@@ -371,7 +371,7 @@ get_intersect_list <- function(type,rd1,rd2,rd3,rd4,logfc_cutoff){
 
 # PCA
 
-Parental samples nicely cluster together. 
+Parental samples nicely cluster together. NSD1KO.NSD2OE still clusters closer to the parental samples than to the NSD1KO samples. 
 
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 rv <- rowVars(assay(vst))
@@ -463,6 +463,9 @@ gsea_cal27_nsd2ko_v_par$gsea_table
 ```
 
 ### GSEA top hit
+
+E2F targets genes that encode proteins involved in DNA replication.
+
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 plot(gsea_cal27_nsd2ko_v_par$top_hit)
 ```
@@ -707,6 +710,9 @@ gsea_cal27_nsdTko_v_par$gsea_table
 ```
 
 ### GSEA top hit
+
+Surprisingly, in NSD.TKO, oxidative phosphorylation is actually downregulated.
+
 ```{r echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 plot(gsea_cal27_nsdTko_v_par$top_hit)
 ```
@@ -852,7 +858,7 @@ get_intersect_list("down", rd_cal27_nsd1ko_v_par,rd_cal27_nsd2ko_v_par,rd_cal27_
 
 # ssGSEA 
 
-We observe high ssGSEA score for NSD.DKO and 1 sample of NSD.1KO. However, unexpectedly, we also observe a similarly high ssGSEA score for Cal27_OE.K36WT (which resembled parental samples in the PCA). 
+We observe upregulation for NSD.DKO and 1 sample of NSD.1KO. However, unexpectedly, we also observe a similar upregulation of oxidative phosphorylation for Cal27_OE.K36WT (which resembled parental samples in the PCA). 
 
 ```{r include=FALSE}
 #To avoid computing strict overlaps, we can compare things at a pathway level by computing ssGSEA scores for some previously enriched pathways, such as those related to metabolism or neurogenesis. The only consistent trend for the two pathways checked appears to be the inactivation of oxidative phosphorylation (Warburg effect?) upon the ablation of NSD1 or both NSD1 and NSD2, but not when K27M-KO is already removed, though this could also be a batch effect.

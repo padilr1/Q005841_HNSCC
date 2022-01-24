@@ -1,0 +1,839 @@
+---
+title: ""
+author: ""
+date: ""
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(gridExtra)
+library(grid)
+library(cowplot)
+library(reactable)
+library(data.table)
+library(reticulate)
+library(sciplot)
+library(plotly)
+library(matrixStats)
+library(SummarizedExperiment)
+library(RColorBrewer)
+library(heatmaply)
+library(ggrepel)
+library(tidyverse)
+library(gprofiler2)
+library(patchwork)
+library(DESeq2)
+library(apeglm)
+library(fgsea)
+library(msigdbr)
+library(compiler)
+library(shiny)
+library(tippy)
+library(msigdbr)
+library(GSVA)
+library(pals)
+library(ggtext)
+library(broom)
+library(DT)
+library(EnsDb.Hsapiens.v79)
+library(org.Hs.eg.db)
+library(eulerr)
+library(GeneOverlap)
+library(ggVennDiagram)
+#load RData
+load("~/Documents/Q005841_HNSCC/data/dds_cal27_new_with_old_parental.RData")
+load("~/Documents/Q005841_HNSCC/data/mdat_cal27_new_with_old_parental.RData")
+load("~/Documents/Q005841_HNSCC/data/vst_cal27_new_with_old_parental.RData")
+```
+
+```{r include= FALSE}
+#DEseq2 defines outliers with respect to the fitted coefficients and the expected values, which change when you introduce covariates, such as batch, to account for more differences. 
+#Cook's distance: Data points with large residuals (outliers) and/or high leverage may distort the outcome and accuracy of a regression. Cook's distance measures the effect of deleting a given observation. Points with a large Cook's distance are considered to merit closer examination in the analysis.
+get_dge_df <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
+  df <- dds %>%
+    results(contrast = c(group,sampA,ref_sampB)) %>%
+    data.frame() %>%
+    na.omit() %>%
+    rownames_to_column('ensembl_gene_id')
+  geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=df$ensembl_gene_id, keytype = "GENEID", columns = c("SYMBOL","GENEID")) #this gets human gene symbols for ensembl gene ids
+  colnames(geneSym) <- c("gene","ensembl_gene_id")
+  df_final <- full_join(df,geneSym,by="ensembl_gene_id")
+  return(df_final)
+})
+#
+get_res_df_shrunken <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
+  df_shrunken <- lfcShrink(dds,contrast=c(group,sampA,ref_sampB),type="ashr")
+  df <- df_shrunken %>%
+    data.frame() %>%
+    na.omit() %>%
+    rownames_to_column('ensembl_gene_id')
+  geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=df$ensembl_gene_id, keytype = "GENEID", columns = c("SYMBOL","GENEID")) #this gets human gene symbols for ensembl gene ids
+  colnames(geneSym) <- c("gene","ensembl_gene_id")
+  df_final <- full_join(df,geneSym,by="ensembl_gene_id")
+  return(df)
+})
+#
+volc <- function(r, x, y, ylab, ttl) {
+  d <- as.data.frame(r) %>%
+    dplyr::rename(x = !!x, y = !!y) %>%
+    mutate(kind = case_when((abs(x) > 2 & y < .05) ~ 'DE',
+                            abs(x) > 2 ~ '|logFC|>2',
+                            y < .05 ~ 'FDR<0.05',
+                            T ~ 'NS'),
+           y = -log10(y))
+  ct <- d %>% 
+    dplyr::filter(kind == 'DE') %>%
+    mutate(up = x > 0) %>%
+    dplyr::count(up) %>%
+    mutate(x = ifelse(up, Inf, -Inf),
+           y = Inf,
+           h = as.numeric(up))
+  ggplot(d, aes(x, y, color = kind)) +
+    geom_vline(xintercept = c(-2, 2), linetype = 'dashed') +
+    geom_hline(yintercept = -log10(0.05), linetype = 'dashed') +
+    geom_point(alpha = .5) +
+    geom_label(aes(x = x, y = y, label = n, hjust = h),
+              vjust = 1, data = ct, inherit.aes = F) +
+     geom_text_repel(aes(label = gene), data = subset(d, kind == "DE"),max.overlaps = 10,show.legend = F, min.segment.length = 0) + scale_y_continuous() +
+    scale_color_manual(values = c('orange','forestgreen', 'red',  'black')) +
+    labs(x = x, y = ylab, title = ttl) + theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        legend.title = element_blank())
+}
+#Pathway analysis
+pathway_analysis <- cmpfun(function(x,fc_cutoff){ #x is dge df
+  up <- gost(x$ensembl_gene_id[x$padj < .05 & x$log2FoldChange > fc_cutoff],
+             organism = 'hsapiens',
+             custom_bg = x$ensembl_gene_id,
+             user_threshold = 0.05,
+             significant = TRUE,
+             evcodes = TRUE,
+             exclude_iea = TRUE,
+             correction_method = "fdr",
+             sources = c("GO","KEGG"))
+  down <- gost(x$ensembl_gene_id[x$padj < .05 & x$log2FoldChange < -fc_cutoff],
+             organism = 'hsapiens',
+             custom_bg = x$ensembl_gene_id,
+             user_threshold = 0.05,
+             significant = TRUE,
+             evcodes = TRUE,
+             exclude_iea = TRUE,
+             correction_method = "fdr",
+             sources = c("GO","KEGG"))
+  up_reactable <- up$result %>%
+    dplyr::select(source, term_name, term_id, intersection_size, p_value) %>% 
+  arrange(desc(source, p_value)) #%>%
+  #setNames(c("Source","Pathway","Number of Genes","FDR"))
+  down_reactable <- down$result %>%
+    dplyr::select(source, term_name, term_id, intersection_size, p_value) %>% 
+  arrange(desc(source, p_value)) #%>%
+  #setNames(c("Source","Pathway","Number of Genes","FDR"))
+  return(list(up=up,down=down,up_reactable=up_reactable,down_reactable=down_reactable))
+})
+#gsea
+gsea <- cmpfun(function(x){
+  e2s <- AnnotationDbi::select(org.Hs.eg.db,
+                             key = x$ensembl_gene_id,
+                             columns = "SYMBOL",
+                             keytype = "ENSEMBL") %>%
+  na.omit() %>%
+  deframe()
+  # use DE test statistic to rank genes
+  s <- x %>% 
+  mutate(symb = e2s[ensembl_gene_id]) %>%
+  na.omit() %>% 
+  group_by(symb) %>%
+  summarise(stat = mean(stat)) %>%
+  deframe()
+  # pathways
+  p <- msigdbr(species = "Homo sapiens", category = "H") %>%
+  mutate(gs_name = sub('^HALLMARK_', '', gs_name)) %>%
+    {split(.$gene_symbol, .$gs_name)}
+  # GSEA
+  r <- fgsea(pathways = p, stats = s, eps = 0.0)
+  plot.r <- r %>%
+  arrange(NES) %>% 
+  mutate(pathway = fct_inorder(pathway)) %>% 
+  ggplot(aes(x = pathway, y = NES)) + 
+  geom_col(aes(fill = -log10(padj))) +
+  scale_fill_viridis_c() +
+  coord_flip() +
+  labs(x = "Pathway",
+       y = "Normalized enrichment score")
+  top_hit <- plotEnrichment(p[[arrange(r, padj)$pathway[1]]], s) +
+  ggtitle(arrange(r, padj)$pathway[1])
+  gsea_table <- arrange(r, padj) %>%
+  dplyr::select(pathway, padj, ES, NES, size, leadingEdge) %>%
+  mutate_at(c('pathway', 'padj', 'ES', 'NES'), function(x) {
+    formatC(x, digits = 3, format = 'g')
+  }) %>%
+  reactable(
+    searchable = T,
+    highlight = T,
+    wrap = F,
+    resizable = T,
+    striped = T,
+    paginationType = "jump",
+    showPageSizeOptions = T,
+    defaultPageSize = 10,
+    columns = list(
+      leadingEdge = colDef(
+        html = T,
+        cell =  function(value, index, name) {
+          value <- paste(value, collapse = ', ')
+          div(
+            style = "cursor: info;
+                     white-space: nowrap;
+                     overflow: hidden;
+                     text-overflow: ellipsis;",
+            tippy(text = value, tooltip = value)
+          )
+        }
+      )
+    )
+  )
+  return(list(s=s,p=p,r=r,plot.r=plot.r,top_hit=top_hit,gsea_table=gsea_table))
+})
+###overlap analysis###
+overlap_analysis <- cmpfun(function(dds,grouping,cond1,cond2,baseCond,fc_cutoff){ #x is dge df; bg = background list
+  x1 <- get_dge_df(dds,grouping,cond1,baseCond) 
+  x2 <- get_dge_df(dds,grouping,cond2,baseCond)
+  bg <- rbind(x1,x2)
+  bg <- bg$ensembl_gene_id
+  bg <- bg[!duplicated(bg)]
+  go.obj <- newGeneOverlap(x1$ensembl_gene_id[x1$padj < .05 & abs(x1$log2FoldChange) > fc_cutoff],x2$ensembl_gene_id[x2$padj < .05 & abs(x2$log2FoldChange) > fc_cutoff],genome.size=length(bg),spec="hg19.gene")
+go.obj <- testGeneOverlap(go.obj)
+  pa <- gost(go.obj@intersection,
+             organism = 'hsapiens',
+             custom_bg = bg,
+             user_threshold = 0.05,
+             significant = TRUE,
+             evcodes = TRUE,
+             exclude_iea = TRUE,
+             correction_method = "fdr",
+             sources = c("GO","KEGG"))
+  reactable <- pa$result %>%
+    dplyr::select(source, term_name, intersection_size, p_value) %>% 
+  arrange(p_value) %>%
+  setNames(c("Source","Pathway","Number of Genes","FDR"))
+  return(list(x1=x1,x2=x2,go.obj=go.obj,pa=pa,reactable=reactable))
+})
+#euler graphs for overlapping genes
+#rd1 and rd2 are dataframes from results(dds)
+get_euler_graph <- function(numOfComparisons,upregulated=TRUE,logfc_cutoff,rd1,rd2,rd3=NULL,rd4=NULL,ttl1,ttl2,ttl3=NULL,ttl4=NULL){
+  set.seed(1)
+  if(numOfComparisons == 2 & upregulated == TRUE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > logfc_cutoff],c2 =
+    rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > logfc_cutoff])
+    names(x) <- c(ttl1,ttl2)
+    p <- plot(euler(x,shape="ellipse"),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+  #
+  if(numOfComparisons == 2 & upregulated == FALSE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -logfc_cutoff],c2 =
+    rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -logfc_cutoff])
+    names(x) <- c(ttl1,ttl2)
+    p <- plot(euler(x,shape="ellipse"),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+  #
+  if(numOfComparisons == 3 & upregulated == TRUE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > logfc_cutoff],c2 = rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > logfc_cutoff],c3 = rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) > logfc_cutoff])
+    names(x) <- c(ttl1,ttl2,ttl3)
+    p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+  #
+     if(numOfComparisons == 3 & upregulated == FALSE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -logfc_cutoff],c2 = rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -logfc_cutoff],c3 = rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) < -logfc_cutoff])
+    names(x) <- c(ttl1,ttl2,ttl3)
+    p <- plot(euler(x),legend=FALSE,quantities=TRUE)
+    return(p)
+  }
+  #
+  if(numOfComparisons == 4 & upregulated == TRUE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > logfc_cutoff],c2 = rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > logfc_cutoff],c3 = rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) > logfc_cutoff],c4 = rd4$ensembl_gene_id[rd4$padj < .05 & (rd4$log2FoldChange) > logfc_cutoff])
+    names(x) <- c(ttl1,ttl2,ttl3,ttl4)
+    p <- ggVennDiagram(x,set_size = 3)
+    return(p)
+  }
+  #
+    if(numOfComparisons == 4 & upregulated == FALSE){
+    x <- list(c1 = rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -logfc_cutoff],c2 = rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -logfc_cutoff],c3 = rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) < -logfc_cutoff],c4 = rd4$ensembl_gene_id[rd4$padj < .05 & (rd4$log2FoldChange) < -logfc_cutoff])
+    names(x) <- c(ttl1,ttl2,ttl3,ttl4)
+    p <- ggVennDiagram(x,set_size = 3)
+    return(p)
+  }
+}
+
+# intersect scatterplot; reindent code lines : command i
+# type refers to all, upregulated, downregulated
+get_intersect_sctr_plt <- function(type,rd1,rd2,xlab,ylab){
+  if(type == "all"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #merge the two DFs
+    combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
+    #get scatterplot of log2FC
+    p <- combined %>%
+      ggplot(aes(x = log2FoldChange.x, y = log2FoldChange.y)) +
+      geom_point() +
+      geom_smooth(method="lm") +
+      stat_cor(method = "pearson", cor.coef.name = "R") +
+      labs(title = "",x= xlab,y= ylab) +
+      theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank())
+    geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=gene_overlap, keytype = "GENEID", columns = c("SYMBOL","GENEID")) #this gets human gene symbols for ensembl gene ids
+    return(list(p=p,geneSym=geneSym))
+  }
+  if(type == "upregulated"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > 2],rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > 2])
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd2$ensembl_gene_id %in% gene_overlap,]
+    #merge the two DFs
+    combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
+    #get scatterplot of log2FC
+    p <- combined %>%
+      ggplot(aes(x = log2FoldChange.x, y = log2FoldChange.y)) +
+      geom_point() +
+      geom_smooth(method="lm") +
+      stat_cor(method = "pearson", cor.coef.name = "R") +
+      labs(title = "",x= xlab,y= ylab) +
+      theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank())
+    geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=gene_overlap, keytype = "GENEID", columns = c("SYMBOL","GENEID")) #this gets human gene symbols for ensembl gene ids
+    return(list(p=p,geneSym=geneSym))
+  }
+  if(type == "downregulated"){
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -2],rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -2])
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd2$ensembl_gene_id %in% gene_overlap,]
+    #merge the two DFs
+    combined <- dplyr::right_join(rd1_df,rd2_df,by="ensembl_gene_id")
+    #get scatterplot of log2FC
+    p <- combined %>%
+      ggplot(aes(x = log2FoldChange.x, y = log2FoldChange.y)) +
+      geom_point() +
+      geom_smooth(method="lm") +
+      stat_cor(method = "pearson", cor.coef.name = "R") +
+      labs(title = "",x= xlab,y= ylab) +
+      theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank())
+    geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=gene_overlap, keytype = "GENEID", columns = c("SYMBOL","GENEID")) #this gets human gene symbols for ensembl gene ids
+    return(list(p=p,geneSym=geneSym))
+  }
+}
+get_intersect_list <- function(type,rd1,rd2,rd3,rd4,logfc_cutoff){
+  if(type == "up"){x <- Reduce(intersect,list(rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) > logfc_cutoff], rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) > logfc_cutoff],rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) > logfc_cutoff],rd4$ensembl_gene_id[rd4$padj < .05 & (rd4$log2FoldChange) > logfc_cutoff]))
+  geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=x, keytype = "GENEID", columns = c("SYMBOL","GENEID"))
+  return(geneSym)
+  }
+  if(type == "down"){x <- Reduce(intersect,list(rd1$ensembl_gene_id[rd1$padj < .05 & (rd1$log2FoldChange) < -logfc_cutoff], rd2$ensembl_gene_id[rd2$padj < .05 & (rd2$log2FoldChange) < -logfc_cutoff],rd3$ensembl_gene_id[rd3$padj < .05 & (rd3$log2FoldChange) < -logfc_cutoff],rd4$ensembl_gene_id[rd4$padj < .05 & (rd4$log2FoldChange) < -logfc_cutoff]))
+  geneSym <- ensembldb::select(EnsDb.Hsapiens.v79, keys=x, keytype = "GENEID", columns = c("SYMBOL","GENEID"))
+  return(geneSym)
+  }
+}
+#took the same genes in both condition
+get_dfs_with_overlapping_genes<- function(type,rd1,rd2,ttl1,ttl2){
+  if(type == "up"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get upregulated df
+    rd1_df <- rd1_df[rd1_df$log2FoldChange > 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd2_df <- rd2_df[rd2_df$log2FoldChange > 0,] %>%
+      dplyr::select(log2FoldChange)
+    #name log2fc
+    rd1_df$condition <- ttl1
+    rd2_df$condition <- ttl2
+    #merge dfs
+    combined <- rbind(rd1_df,rd2_df)
+    return(combined)
+  }
+  if(type == "down"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get upregulated df
+    rd1_df <- rd1_df[rd1_df$log2FoldChange < 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd2_df <- rd2_df[rd2_df$log2FoldChange < 0,] %>%
+      dplyr::select(log2FoldChange)
+    #name log2fc
+    rd1_df$condition <- ttl1
+    rd2_df$condition <- ttl2
+    #merge dfs
+    combined <- rbind(rd1_df,rd2_df)
+    return(combined)
+  }
+}
+```
+
+# Cal27 ssGSEA
+
+```{r include=FALSE}
+#To avoid computing strict overlaps, we can compare things at a pathway level by computing ssGSEA scores for some previously enriched pathways, such as those related to metabolism or neurogenesis. The only consistent trend for the two pathways checked appears to be the inactivation of oxidative phosphorylation (Warburg effect?) upon the ablation of NSD1 or both NSD1 and NSD2, but not when K27M-KO is already removed, though this could also be a batch effect.
+ps <- msigdbr(species = "Homo sapiens") %>%
+  mutate(cat = paste0(gs_cat, '.', gs_subcat) %>% 
+           sub('\\.$', '', .)) %>% 
+  split(., .$cat) %>% 
+  lapply(function(x) split(x$gene_symbol, x$gs_name))
+
+#pps <- c(ps$H['HALLMARK_OXIDATIVE_PHOSPHORYLATION'])
+
+pps <- c(ps$`C5.GO:BP`['GOBP_NEURON_DIFFERENTIATION'],
+         ps$H['HALLMARK_OXIDATIVE_PHOSPHORYLATION'],
+         ps$H['HALLMARK_KRAS_SIGNALING_DN'],
+         ps$H['HALLMARK_KRAS_SIGNALING_UP'],
+         ps$H['HALLMARK_P53_PATHWAY'])
+
+#dds <- cbind(DESeqDataSetFromTximport(txi = salmon2,
+         #                       colData = md2,
+        #                        design = ~cond),
+         #    DESeqDataSetFromTximport(txi = salmon,
+       #                         colData = md,
+             #                   design = ~cond))
+
+#dds <- DESeq(dds)
+vsd <- vst(dds, blind = T)
+
+load('~/Documents/Q005841_HNSCC/work/intersect_analysis/g36.rda')
+g <- g[g$type == 'gene']
+
+g$ID <- gsub("[.][0-9]*", "", g$ID)
+
+e2g <- setNames(g$gene_name, g$ID)
+
+m <- assay(vsd) %>%
+  as.data.frame() %>%
+  rownames_to_column('ID')%>%
+  dplyr::filter(ID %in% names(e2g)) %>%
+  mutate(name = e2g[ID],
+         mx = rowMeans(dplyr::select(., where(is.numeric)))) %>%
+  group_by(name) %>%
+  slice_max(mx, n = 1, with_ties = F) %>%
+  ungroup() %>%
+  dplyr::select(-ID, -mx) %>%
+  column_to_rownames('name') %>%
+  as.matrix() %>%
+  {.[apply(., 1, sd) > 0,]}
+
+r <- gsva(m, pps)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,out.width='100%',fig.width=6,fig.height=9,dev='svg'}
+r %>% as.data.frame() %>% 
+  rownames_to_column('pathway') %>%
+  pivot_longer(-pathway, names_to = 'samp', values_to = 'score') %>%
+  merge( rownames_to_column(rbind(cal27_new_with_old_parental_mdat[,'condition',drop=F]), 'samp')) %>%
+  arrange(condition, samp, pathway) %>%
+  mutate(samp = fct_inorder(samp)) %>%
+  ggplot(aes(x = samp, y = score, color = condition)) +
+  geom_point() +
+  facet_wrap(~ pathway, ncol = 1) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = 'bottom')
+```
+
+# Detroit ssGSEA
+
+```{r include=FALSE}
+#To avoid computing strict overlaps, we can compare things at a pathway level by computing ssGSEA scores for some previously enriched pathways, such as those related to metabolism or neurogenesis. The only consistent trend for the two pathways checked appears to be the inactivation of oxidative phosphorylation (Warburg effect?) upon the ablation of NSD1 or both NSD1 and NSD2, but not when K27M-KO is already removed, though this could also be a batch effect.
+load("~/Documents/Q005841_HNSCC/data/dds_detroit_newbatchOnly.RData")
+load("~/Documents/Q005841_HNSCC/data/mdat_Detroit_newbatch_only.RData")
+vsd <- vst(dds, blind = T)
+
+m <- assay(vsd) %>%
+  as.data.frame() %>%
+  rownames_to_column('ID')%>%
+  dplyr::filter(ID %in% names(e2g)) %>%
+  mutate(name = e2g[ID],
+         mx = rowMeans(dplyr::select(., where(is.numeric)))) %>%
+  group_by(name) %>%
+  slice_max(mx, n = 1, with_ties = F) %>%
+  ungroup() %>%
+  dplyr::select(-ID, -mx) %>%
+  column_to_rownames('name') %>%
+  as.matrix() %>%
+  {.[apply(., 1, sd) > 0,]}
+
+r <- gsva(m, pps)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,out.width='100%',fig.width=6,fig.height=9,dev='svg'}
+r %>% as.data.frame() %>% 
+  rownames_to_column('pathway') %>%
+  pivot_longer(-pathway, names_to = 'samp', values_to = 'score') %>%
+  merge( rownames_to_column(rbind(cdatNew_hnscc_final[,'condition',drop=F]), 'samp')) %>%
+  arrange(condition, samp, pathway) %>%
+  mutate(samp = fct_inorder(samp)) %>%
+  ggplot(aes(x = samp, y = score, color = condition)) +
+  geom_point() +
+  facet_wrap(~ pathway, ncol = 1) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = 'bottom')
+```
+
+# NSD1KO v NSD2KO: same # of reps
+
+<b> Analysis of overlapping genes between NSD1KO v parental & NSD2KO v parental. 2 reps per condition, including the parental (old and new batch parentals combined). </b>
+
+## All genes
+
+When looking at all genes, we observe low correlation in gene expression changes. 
+
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+load("~/Documents/Q005841_HNSCC/data/new_hnscc_cal27_only2NSDKO_reps.RData")
+rd_cal27_nsd1ko_v_par <- get_dge_df(dds,"condition","NSD1KO","Parental")
+rd_cal27_nsd2ko_v_par <- get_dge_df(dds,"condition","NSD2.KO","Parental")
+l <- get_intersect_sctr_plt(type = "all",rd1 = rd_cal27_nsd1ko_v_par,rd2 = rd_cal27_nsd2ko_v_par,xlab = "log2FC NSD1KO v Parental",ylab = "log2FC NSD2KO v Parental")
+l$p
+```
+
+## Upregulated DEGs {.tabset .tabset-pills}
+
+For upregulated DEGs, we do not observe many overlapping genes (40), but in those genes, there is a high correlation in gene expression changes.
+
+### Euler
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+get_euler_graph(numOfComparisons = 2,upregulated = TRUE,logfc_cutoff = 2,ttl1 = "NSD1KO",ttl2 = "NSD2KO",rd1 = rd_cal27_nsd1ko_v_par,rd2 = rd_cal27_nsd2ko_v_par)
+```
+
+### Scatterplot
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+l <- get_intersect_sctr_plt(type = "upregulated",rd1 = rd_cal27_nsd1ko_v_par,rd2 = rd_cal27_nsd2ko_v_par,xlab = "log2FC NSD1KO v Parental",ylab = "log2FC NSD2KO v Parental")
+l$p
+```
+
+### List of genes
+```{r  echo = FALSE, warning=FALSE,message=FALSE}
+l$geneSym %>%
+  reactable()
+```
+
+## Downregulated DEGs {.tabset .tabset-pills}
+
+There is even fewer overlapping downregulated DEGs between the two conditions as well as a lower correlation in gene expression changes. 
+
+### Euler
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+get_euler_graph(numOfComparisons = 2,upregulated = FALSE,logfc_cutoff = 2,ttl1 = "NSD1KO",ttl2 = "NSD2KO",rd1 = rd_cal27_nsd1ko_v_par,rd2 = rd_cal27_nsd2ko_v_par)
+```
+
+### Scatterplot
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+l <- get_intersect_sctr_plt(type = "downregulated",rd1 = rd_cal27_nsd1ko_v_par,rd2 = rd_cal27_nsd2ko_v_par,xlab = "log2FC NSD1KO v Parental",ylab = "log2FC NSD2KO v Parental")
+l$p
+```
+
+### List of genes
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+l$geneSym %>%
+  reactable()
+```
+
+## Comparion of log2FC
+
+Question: which condition (NSD1KO or NSD2KO) results in greater gene expression changes?
+<p>&nbsp;</p>
+- Performed shrinking of the log2 fold changes to account for low counts & high dispersion values
+<p>&nbsp;</p>
+- Took all the overlapping genes between the two conditions
+<p>&nbsp;</p>
+- Split each condition into their respective upregulated and downregulated genes. Performed t.test
+<p>&nbsp;</p>
+- For both upregulated and downregulated genes, we find overall greater gene expression changes in NSD1KO than in NSD2KO.
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#need to perform shrinking of the log2 fold changes to account for Low counts & High dispersion values
+#As with the shrinkage of dispersion estimates, LFC shrinkage uses information from all genes to generate more accurate estimates. Specifically, the distribution of LFC estimates for all genes is used (as a prior) to shrink the LFC estimates of genes with little information or high dispersion toward more likely (lower) LFC estimates.
+get_res_df_shrunken <- cmpfun(function(dds,group,sampA,ref_sampB){ #group is similar to condition
+  df_shrunken <- lfcShrink(dds,contrast=c(group,sampA,ref_sampB),type="ashr")
+  df <- df_shrunken %>%
+    data.frame() %>%
+    na.omit() %>%
+    rownames_to_column('ensembl_gene_id')
+  return(df)
+})
+#format dataType_cellline_cond1_v_cond2
+res_shrunken_cal27_nsd1ko_v_par <- get_res_df_shrunken(dds,"condition","NSD1KO","Parental")
+res_shrunken_cal27_nsd2ko_v_par <- get_res_df_shrunken(dds,"condition","NSD2.KO","Parental")
+#took the same genes in both condition
+get_dfs_with_overlapping_genes<- function(type,rd1,rd2,ttl1,ttl2){
+  if(type == "up"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get upregulated df
+    rd1_df <- rd1_df[rd1_df$log2FoldChange > 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd2_df <- rd2_df[rd2_df$log2FoldChange > 0,] %>%
+      dplyr::select(log2FoldChange)
+    #name log2fc
+    rd1_df$condition <- ttl1
+    rd2_df$condition <- ttl2
+    #merge dfs
+    combined <- rbind(rd1_df,rd2_df)
+    return(combined)
+  }
+  if(type == "down"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get upregulated df
+    rd1_df <- rd1_df[rd1_df$log2FoldChange < 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd2_df <- rd2_df[rd2_df$log2FoldChange < 0,] %>%
+      dplyr::select(log2FoldChange)
+    #name log2fc
+    rd1_df$condition <- ttl1
+    rd2_df$condition <- ttl2
+    #merge dfs
+    combined <- rbind(rd1_df,rd2_df)
+    return(combined)
+  }
+}
+combined_nsd1ko_nsd2ko_up_shrunken <- get_dfs_with_overlapping_genes("up",res_shrunken_cal27_nsd1ko_v_par,res_shrunken_cal27_nsd2ko_v_par,"NSD1KO","NSD2KO") %>% na.omit()
+#colnames(combined_nsd1ko_nsd2ko_up_shrunken) <- c("log2FoldChange_up","condition")
+combined_nsd1ko_nsd2ko_down_shrunken <- get_dfs_with_overlapping_genes("down",res_shrunken_cal27_nsd1ko_v_par,res_shrunken_cal27_nsd2ko_v_par,"NSD1KO","NSD2KO") %>% na.omit()
+#colnames(combined_nsd1ko_nsd2ko_down_shrunken) <- c("log2FoldChange_down","condition")
+summary_up <- combined_nsd1ko_nsd2ko_up_shrunken %>% na.omit() %>%
+  dplyr::group_by(condition) %>%
+  summarise(
+    se = se(log2FoldChange),
+    log2FoldChange = mean(log2FoldChange)
+  )
+summary_down <- combined_nsd1ko_nsd2ko_down_shrunken %>% na.omit() %>%
+  dplyr::group_by(condition) %>%
+  summarise(
+    se = se(log2FoldChange),
+    log2FoldChange = mean(log2FoldChange)
+  )
+#colnames(combined_nsd1ko_nsd2ko_down_shrunken) <- c("log2FoldChange_down","condition")
+p_up <- ggplot(data = combined_nsd1ko_nsd2ko_up_shrunken,aes(x = condition,y = log2FoldChange),position = "stack",color = "darkgray", size = 2) +
+  geom_jitter(position = position_jitter(0.2),color = "darkgray", size = 2) +
+  geom_errorbar(aes(ymin = log2FoldChange-se, ymax= log2FoldChange+se),data=summary_up, width = 0.3,color="#0099ff",position=position_dodge(width=1)) +
+  geom_point(aes(x = condition, y = log2FoldChange),data = summary_up,color = "#0099ff",position=position_dodge(width=1)) + 
+  ylab("log2FC") + xlab("") + labs(title = "") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) +
+  geom_text(x=1,y=1.5,label="0.244±0.005",size=3) +
+  geom_text(x=2,y=1.5,label="0.125±0.004",size=3) +
+  coord_cartesian(clip = "off")
+#
+p_down <- ggplot(data = combined_nsd1ko_nsd2ko_down_shrunken,aes(x = condition,y = log2FoldChange),position = position_jitter(0.2),color = "darkgray", size = 2) +
+  geom_jitter(data = combined_nsd1ko_nsd2ko_down_shrunken,aes(x = condition,y = log2FoldChange),position = position_jitter(0.2),color = "darkgray", size = 2) +
+  geom_errorbar(aes(ymin = log2FoldChange-se, ymax= log2FoldChange+se),data=summary_down, width = 0.3,color="#0099ff",position=position_dodge(width=1)) +
+  geom_point(aes(x = condition, y = log2FoldChange),data = summary_down,color = "#0099ff",position=position_dodge(width=1)) +
+  ylab("log2FC") + xlab("") + labs(title = "") +
+  scale_x_discrete(position = "top") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) +
+  geom_text(x=1,y=-1.5,label="-0.47±0.008",size=3) +
+  geom_text(x=2,y=-1.5,label="-0.11±0.002",size=3)
+#get stats
+stat.test_up <- compare_means(log2FoldChange ~ condition, data = combined_nsd1ko_nsd2ko_up_shrunken,paired = FALSE,p.adjust.method = "fdr", method = 't.test',method.args = list(alternative = "equal")) %>% dplyr::select(-".y.") %>% mutate(y.position = c(12))
+stat.test_down <- compare_means(log2FoldChange ~ condition, data = combined_nsd1ko_nsd2ko_down_shrunken,paired = FALSE,p.adjust.method = "fdr", method = 't.test',method.args = list(alternative = "equal")) %>% dplyr::select(-".y.") %>% mutate(y.position = c(-15))
+#make final graphic object
+p_up_final <- p_up + stat_pvalue_manual(stat.test_up, label = "p.adj = {p.adj}",size = 3,linetype=0)
+p_down_final <- p_down + stat_pvalue_manual(stat.test_down,label = "p.adj = {p.adj}",size = 3,linetype = 0)
+plot_grid(p_up_final,p_down_final,ncol = 1)
+```
+
+# NSD1KO.NSD2OE
+
+<b> One replicate for each of the condition compared to parental. </b>
+<p>&nbsp;</p>
+Much lower gene expression changes in NSD1KO.NSD2OE than in NSD1KO.
+
+## Comparison of log2FC
+```{r, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#need to perform shrinking of the log2 fold changes to account for Low counts & High dispersion values
+#As with the shrinkage of dispersion estimates, LFC shrinkage uses information from all genes to generate more accurate estimates. Specifically, the distribution of LFC estimates for all genes is used (as a prior) to shrink the LFC estimates of genes with little information or high dispersion toward more likely (lower) LFC estimates.
+load(file="~/Documents/Q005841_HNSCC/data/oldNewHNSCC_dds_V3_splitNSD1KO.RData")
+res_shrunken_cal27_nsd2oe_v_par <- get_res_df_shrunken(dds = dds,group = "condition",sampA = "NSD1KO.OE.NSD2",ref_sampB = "Parental")
+res_shrunken_cal27_nsd1koR1_v_par <- get_res_df_shrunken(dds,"condition","NSD1KO_R1","Parental")
+res_shrunken_cal27_nsd1koR2_v_par <- get_res_df_shrunken(dds,"condition","NSD1KO_R2","Parental")
+#took the same genes in both condition
+get_dfs_with_overlapping_genes<- function(type,rd1,rd2,rd3,ttl1,ttl2,ttl3){
+  if(type == "up"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id),rd3$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd2$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 3
+    rd3_df <- rd3[rd3$ensembl_gene_id %in% gene_overlap,]
+    #get upregulated df
+    rd1_df <- rd1_df[rd1_df$log2FoldChange > 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd2_df <- rd2_df[rd2_df$log2FoldChange > 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd3_df <- rd3_df[rd3_df$log2FoldChange > 0,] %>%
+      dplyr::select(log2FoldChange)
+    #name log2fc
+    rd1_df$condition <- ttl1
+    rd2_df$condition <- ttl2
+    rd3_df$condition <- ttl3
+    #merge dfs
+    combined <- rbind(rd1_df,rd2_df,rd3_df)
+    return(combined)
+  }
+  if(type == "down"){
+    #get overlapping genes
+    gene_overlap <- base::intersect(base::intersect(rd1$ensembl_gene_id,rd2$ensembl_gene_id),rd2$ensembl_gene_id)
+    #get DGE df for sample 1
+    rd1_df <- rd1[rd1$ensembl_gene_id %in% gene_overlap,]
+    #get DGE df for sample 2
+    rd2_df <- rd2[rd2$ensembl_gene_id %in% gene_overlap,]
+    #for sample 3
+    rd3_df <- rd3[rd3$ensembl_gene_id %in% gene_overlap,]
+    #get upregulated df
+    rd1_df <- rd1_df[rd1_df$log2FoldChange < 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd2_df <- rd2_df[rd2_df$log2FoldChange < 0,] %>%
+      dplyr::select(log2FoldChange)
+    rd3_df <- rd3_df[rd3_df$log2FoldChange < 0,] %>%
+      dplyr::select(log2FoldChange)
+    #name log2fc
+    rd1_df$condition <- ttl1
+    rd2_df$condition <- ttl2
+    rd3_df$condition <- ttl3
+    #merge dfs
+    combined <- rbind(rd1_df,rd2_df,rd3_df)
+    return(combined)
+  }
+}
+combined_nsd1ko_nsd2oe_up_shrunken <- get_dfs_with_overlapping_genes("up",res_shrunken_cal27_nsd1koR1_v_par,res_shrunken_cal27_nsd1koR2_v_par,res_shrunken_cal27_nsd2oe_v_par,"NSD1KO_R1","NSD1KO_R2","NSD1KO.NSD2OE") %>% na.omit()
+#colnames(combined_nsd1ko_nsd2ko_up_shrunken) <- c("log2FoldChange_up","condition")
+combined_nsd1ko_nsd2oe_down_shrunken <- get_dfs_with_overlapping_genes("down",res_shrunken_cal27_nsd1koR1_v_par,res_shrunken_cal27_nsd1koR2_v_par,res_shrunken_cal27_nsd2oe_v_par,"NSD1KO_R1","NSD1KO_R2","NSD1KO.NSD2OE") %>% na.omit()
+#colnames(combined_nsd1ko_nsd2ko_down_shrunken) <- c("log2FoldChange_down","condition")
+summary_up <- combined_nsd1ko_nsd2oe_up_shrunken %>% na.omit() %>%
+  dplyr::group_by(condition) %>%
+  summarise(
+    se = round(se(log2FoldChange),digits = 3),
+    log2FoldChange = round(mean(log2FoldChange),digits=3)
+  )
+summary_down <- combined_nsd1ko_nsd2oe_down_shrunken %>% na.omit() %>%
+  dplyr::group_by(condition) %>%
+  summarise(
+    se = round(se(log2FoldChange), digits=3),
+    log2FoldChange = round(mean(log2FoldChange),digits=3)
+  )
+#colnames(combined_nsd1ko_nsd2ko_down_shrunken) <- c("log2FoldChange_down","condition")
+p_up <- ggplot(data = combined_nsd1ko_nsd2oe_up_shrunken,aes(x = condition,y = log2FoldChange),position = "stack",color = "darkgray", size = 2) +
+  geom_jitter(position = position_jitter(0.2),color = "darkgray", size = 2) +
+  geom_errorbar(aes(ymin = log2FoldChange-se, ymax= log2FoldChange+se),data=summary_up, width = 0.3,color="#0099ff",position=position_dodge(width=1)) +
+  geom_point(aes(x = condition, y = log2FoldChange),data = summary_up,color = "#0099ff",position=position_dodge(width=1)) + 
+  ylab("log2FC") + xlab("") + labs(title = "") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) +
+  geom_text(x=1,y=1.5,label=paste0(summary_up[summary_up$condition=="NSD1KO_R1","log2FoldChange"],"±",summary_up[summary_up$condition=="NSD1KO_R1","se"]),size=3) +
+  geom_text(x=2,y=1.5,label=paste0(summary_up[summary_up$condition=="NSD1KO_R2","log2FoldChange"],"±",summary_up[summary_up$condition=="NSD1KO_R2","se"]),size=3) +
+  geom_text(x=3,y=1.5,label=paste0(summary_up[summary_up$condition=="NSD1KO.NSD2OE","log2FoldChange"],"±",summary_up[summary_up$condition=="NSD1KO.NSD2OE","se"]),size=3) +
+  coord_cartesian(clip = "off")
+#
+p_down <- ggplot(data = combined_nsd1ko_nsd2oe_down_shrunken,aes(x = condition,y = log2FoldChange),position = position_jitter(0.2),color = "darkgray", size = 2) +
+  geom_jitter(position = position_jitter(0.2),color = "darkgray", size = 2) +
+  geom_errorbar(aes(ymin = log2FoldChange-se, ymax= log2FoldChange+se),data=summary_down, width = 0.3,color="#0099ff",position=position_dodge(width=1)) +
+  geom_point(aes(x = condition, y = log2FoldChange),data = summary_down,color = "#0099ff",position=position_dodge(width=1)) +
+  ylab("log2FC") + xlab("") + labs(title = "") +
+  scale_x_discrete(position = "top") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,vjust = 2.5),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) +
+  geom_text(x=1,y=-1.5,label=paste0(summary_down[summary_down$condition=="NSD1KO_R1","log2FoldChange"],"±",summary_down[summary_down$condition=="NSD1KO_R1","se"]),size=3) +
+  geom_text(x=2,y=-1.5,label=paste0(summary_down[summary_down$condition=="NSD1KO_R2","log2FoldChange"],"±",summary_down[summary_down$condition=="NSD1KO_R2","se"]),size=3) +
+  geom_text(x=3,y=-1.5,label=paste0(summary_down[summary_down$condition=="NSD1KO.NSD2OE","log2FoldChange"],"±",summary_down[summary_down$condition=="NSD1KO.NSD2OE","se"]),size=3)
+#get stats
+stat.test_up <- compare_means(log2FoldChange ~ condition, data = combined_nsd1ko_nsd2oe_up_shrunken,paired = FALSE,p.adjust.method = "fdr", method = 't.test',method.args = list(alternative = "equal")) %>% dplyr::select(-".y.") %>% mutate(y.position = c(11,13,15))
+stat.test_down <- compare_means(log2FoldChange ~ condition, data = combined_nsd1ko_nsd2oe_down_shrunken,paired = FALSE,p.adjust.method = "fdr", method = 't.test',method.args = list(alternative = "equal")) %>% dplyr::select(-".y.") %>% mutate(y.position = c(-12,-16,-20))
+#make final graphic object
+p_up_final <- p_up + stat_pvalue_manual(stat.test_up, label = "p.adj = {p.adj}",size = 3)
+p_down_final <- p_down + stat_pvalue_manual(stat.test_down,label = "p.adj = {p.adj}",size = 3,tip.length = 0)
+plot_grid(p_up_final,p_down_final,ncol = 1)
+```
+
+## Scatterplot
+
+Fairly weak correlation in gene expression changes between NSD1KO and NSD1KO.NSD2OE.
+
+```{r NSD2OE, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
+#format dataType_cellline_cond1_v_cond2
+rd_cal27_nsd2oe_v_par <- get_dge_df(dds = dds,group = "condition",sampA = "NSD1KO.OE.NSD2",ref_sampB = "Parental")
+rd_cal27_nsd1koR1_v_par<- get_dge_df(dds = dds,group = "condition",sampA = "NSD1KO_R1",ref_sampB = "Parental")
+rd_cal27_nsd1koR2_v_par <- get_dge_df(dds = dds,group = "condition",sampA = "NSD1KO_R2",ref_sampB = "Parental")
+nsd2oe_nsd1koR1_sctr_plt <- get_intersect_sctr_plt("all",rd_cal27_nsd2oe_v_par,rd_cal27_nsd1koR1_v_par,xlab = "log2FC NSD1KO.NSD2OE v Parental",ylab = "log2FC NSD1KO_R1 v Parental")
+nsd2oe_nsd1koR2_sctr_plt <- get_intersect_sctr_plt("all",rd_cal27_nsd2oe_v_par,rd_cal27_nsd1koR2_v_par,xlab = "log2FC NSD1KO.NSD2OE v Parental",ylab = "log2FC NSD1KO_R2 v Parental")
+nsd1ko_r1_r2 <- get_intersect_sctr_plt("all",rd_cal27_nsd1koR1_v_par,rd_cal27_nsd1koR2_v_par,xlab = "log2FC NSD1KO_R1 v Parental",ylab = "log2FC NSD1KO_R2 v Parental")
+#arrange into 3-grid plot
+ggarrange(nsd2oe_nsd1koR1_sctr_plt$p,nsd2oe_nsd1koR2_sctr_plt$p,nsd1ko_r1_r2$p)
+```
+
+

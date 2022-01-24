@@ -11,7 +11,7 @@
 
 
 
-<title>batch_analysis.knit</title>
+<title>fourth_page.knit</title>
 
 <script src="site_libs/header-attrs-2.11/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -35,6 +35,12 @@
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<script src="site_libs/core-js-2.5.3/shim.min.js"></script>
+<script src="site_libs/react-17.0.0/react.min.js"></script>
+<script src="site_libs/react-17.0.0/react-dom.min.js"></script>
+<script src="site_libs/reactwidget-1.0.0/react-tools.js"></script>
+<script src="site_libs/htmlwidgets-1.5.4/htmlwidgets.js"></script>
+<script src="site_libs/reactable-binding-0.2.3/reactable.js"></script>
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -348,73 +354,94 @@ div.tocify {
 </div>
 
 
-<div id="direct-comparisons" class="section level1 tabset">
-<h1 class="tabset">Direct comparisons</h1>
-<p><b> Cutoff for DEGs: abs(FC) &gt; 2 &amp; padj &lt; 0.05. Old batch set as baseline. </b></p>
-<div id="parental" class="section level2">
-<h2>Parental</h2>
-<p>In the new batch, OE.K36WT was included as another replicate for parental. In the old batch, K36R was included as another replicate for parental to avoid 1v1 comparisons.</p>
-<p><img src="batch_analysis_files/figure-html/unnamed-chunk-3-1.png" width="100%" /></p>
+<div id="cal27-ssgsea" class="section level1">
+<h1>Cal27 ssGSEA</h1>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-3-1.svg" width="100%" /></p>
 </div>
-<div id="nsd1ko" class="section level2">
-<h2>NSD1KO</h2>
-<p><img src="batch_analysis_files/figure-html/unnamed-chunk-4-1.png" width="100%" /></p>
+<div id="detroit-ssgsea" class="section level1">
+<h1>Detroit ssGSEA</h1>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-5-1.svg" width="100%" /></p>
 </div>
-<div id="nsd.dko" class="section level2">
-<h2>NSD.DKO</h2>
-<p><img src="batch_analysis_files/figure-html/unnamed-chunk-5-1.png" width="100%" /></p>
+<div id="nsd1ko-v-nsd2ko-same-of-reps" class="section level1">
+<h1>NSD1KO v NSD2KO: same # of reps</h1>
+<p><b> Analysis of overlapping genes between NSD1KO v parental &amp; NSD2KO v parental. 2 reps per condition, including the parental (old and new batch parentals combined). </b></p>
+<div id="all-genes" class="section level2">
+<h2>All genes</h2>
+<p>When looking at all genes, we observe low correlation in gene expression changes.</p>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-6-1.png" width="100%" /></p>
+</div>
+<div id="upregulated-degs" class="section level2 tabset tabset-pills">
+<h2 class="tabset tabset-pills">Upregulated DEGs</h2>
+<p>For upregulated DEGs, we do not observe many overlapping genes (40), but in those genes, there is a high correlation in gene expression changes.</p>
+<div id="euler" class="section level3">
+<h3>Euler</h3>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-7-1.png" width="100%" /></p>
+</div>
+<div id="scatterplot" class="section level3">
+<h3>Scatterplot</h3>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-8-1.png" width="100%" /></p>
+</div>
+<div id="list-of-genes" class="section level3">
+<h3>List of genes</h3>
+<div id="htmlwidget-e0541469b5ed4906484e" class="reactable html-widget" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-e0541469b5ed4906484e">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"SYMBOL":["CMPK2","RSAD2","RNF144A","AC069277.2","FGFBP1","RP11-297P16.4","GS1-600G8.5","NUDT11","RP13-188A5.1","KLF8","ARHGEF9","NAP1L2","UHRF2P1","HMGN5","SH3BGRL","POF1B","SNRPGP5","RP11-757G1.6","LINC00452","RNASE1","STON2","C14orf132","BCL11B","NUDT7","KRT9","ANKFN1","CCBE1","RP11-760L24.1","CASP14","TSHZ3","IFNL1","IGFL1","TEAD2","FPR1"],"GENEID":["ENSG00000134326","ENSG00000134321","ENSG00000151692","ENSG00000189229","ENSG00000137440","ENSG00000250920","ENSG00000235385","ENSG00000196368","ENSG00000227486","ENSG00000102349","ENSG00000131089","ENSG00000186462","ENSG00000223650","ENSG00000198157","ENSG00000131171","ENSG00000124429","ENSG00000235763","ENSG00000250508","ENSG00000229373","ENSG00000129538","ENSG00000140022","ENSG00000227051","ENSG00000127152","ENSG00000140876","ENSG00000171403","ENSG00000153930","ENSG00000183287","ENSG00000267061","ENSG00000105141","ENSG00000121297","ENSG00000182393","ENSG00000188293","ENSG00000074219","ENSG00000171051"]},"columns":[{"accessor":"SYMBOL","name":"SYMBOL","type":"character"},{"accessor":"GENEID","name":"GENEID","type":"character"}],"defaultPageSize":10,"paginationType":"numbers","showPageInfo":true,"minRows":1,"dataKey":"a19d40550de2f81867e1bc6f0ab3ec3c","key":"a19d40550de2f81867e1bc6f0ab3ec3c"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
-<div id="relative-to-parental" class="section level1 tabset">
-<h1 class="tabset">Relative to parental</h1>
-<p><b> We observe moderate correlation in gene expression changes between new and old batch NSD1KO. However, we observe a fairly weak correlation between new and old batch NSD.DKO. There are greater number of DEGs in the old batch than in the new batch. </b></p>
-<div id="nsd1ko-v-parental" class="section level2 tabset tabset-pills">
-<h2 class="tabset tabset-pills">NSD1KO v parental</h2>
-<div id="all-26613-genes" class="section level3">
-<h3>All 26613 genes</h3>
-<div class="figure">
-<img src="batch_analysis_files/figure-html/unnamed-chunk-6-1.png" alt="For the same gene, we're looking at the log2FC of NSD1KO compared to parental." width="100%" />
-<p class="caption">
-For the same gene, we’re looking at the log2FC of NSD1KO compared to parental.
+<div id="downregulated-degs" class="section level2 tabset tabset-pills">
+<h2 class="tabset tabset-pills">Downregulated DEGs</h2>
+<p>There is even fewer overlapping downregulated DEGs between the two conditions as well as a lower correlation in gene expression changes.</p>
+<div id="euler-1" class="section level3">
+<h3>Euler</h3>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-10-1.png" width="100%" /></p>
+</div>
+<div id="scatterplot-1" class="section level3">
+<h3>Scatterplot</h3>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-11-1.png" width="100%" /></p>
+</div>
+<div id="list-of-genes-1" class="section level3">
+<h3>List of genes</h3>
+<div id="htmlwidget-d42468d86de4a421697d" class="reactable html-widget" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-d42468d86de4a421697d">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"SYMBOL":["RIMS3","RP5-1198O20.4","WDR78","ZNF697","BCAN","RP11-284F21.10","RGS16","ERO1LB","CLGN","DMGDH","PPIL6","BHLHA15","DNAJB9","LSMEM1","FEZF1-AS1","SLC13A4","TMEM178B","GKAP1","NAMPTP1","RP11-47A8.5","RP11-298J20.4","CASP5","SCNN1A","P2RX7","DCT","NGFR","TBX2","SRXN1","THBD","GDF15","MIR3189","IL11","FAM109B","MIR3648-1","MIR3687-1"],"GENEID":["ENSG00000117016","ENSG00000230615","ENSG00000152763","ENSG00000143067","ENSG00000132692","ENSG00000272405","ENSG00000143333","ENSG00000086619","ENSG00000153132","ENSG00000132837","ENSG00000185250","ENSG00000180535","ENSG00000128590","ENSG00000181016","ENSG00000230316","ENSG00000164707","ENSG00000261115","ENSG00000165113","ENSG00000229644","ENSG00000272933","ENSG00000249456","ENSG00000137757","ENSG00000111319","ENSG00000089041","ENSG00000080166","ENSG00000064300","ENSG00000121068","ENSG00000271303","ENSG00000178726","ENSG00000130513","ENSG00000264175","ENSG00000095752","ENSG00000177096","ENSG00000264462","ENSG00000264063"]},"columns":[{"accessor":"SYMBOL","name":"SYMBOL","type":"character"},{"accessor":"GENEID","name":"GENEID","type":"character"}],"defaultPageSize":10,"paginationType":"numbers","showPageInfo":true,"minRows":1,"dataKey":"01366b747e753c21d6655ce1a6bb1a07","key":"01366b747e753c21d6655ce1a6bb1a07"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div id="comparion-of-log2fc" class="section level2">
+<h2>Comparion of log2FC</h2>
+Question: which condition (NSD1KO or NSD2KO) results in greater gene expression changes?
+<p>
+ 
 </p>
+<ul>
+<li>Performed shrinking of the log2 fold changes to account for low counts &amp; high dispersion values
+<p>
+ 
+</p></li>
+<li>Took all the overlapping genes between the two conditions
+<p>
+ 
+</p></li>
+<li>Split each condition into their respective upregulated and downregulated genes. Performed t.test
+<p>
+ 
+</p></li>
+<li>For both upregulated and downregulated genes, we find overall greater gene expression changes in NSD1KO than in NSD2KO. <img src="fourth_page_files/figure-html/unnamed-chunk-13-1.png" width="100%" /></li>
+</ul>
 </div>
 </div>
-<div id="only-degs" class="section level3 tabset tabset-pills">
-<h3 class="tabset tabset-pills">Only DEGs</h3>
-<p><b> Cutoff for DEGs: abs(FC) &gt; 2 &amp; padj &lt; 0.05. </b></p>
-<p>Fewer overlapping upregulated genes between the two batches. However, greater correlation in log2FC in upregulated DEGs than downregulated DEGs.</p>
-<div id="upregulated" class="section level4">
-<h4>Upregulated</h4>
-<p><img src="batch_analysis_files/figure-html/unnamed-chunk-7-1.png" width="100%" /><img src="batch_analysis_files/figure-html/unnamed-chunk-7-2.png" width="100%" /></p>
-</div>
-<div id="downregulated" class="section level4">
-<h4>Downregulated</h4>
-<p><img src="batch_analysis_files/figure-html/unnamed-chunk-8-1.png" width="100%" /><img src="batch_analysis_files/figure-html/unnamed-chunk-8-2.png" width="100%" /></p>
-</div>
-</div>
-</div>
-<div id="nsd.dko-v-parental" class="section level2 tabset tabset-pills">
-<h2 class="tabset tabset-pills">NSD.DKO v parental</h2>
-<div id="all-27461-genes" class="section level3">
-<h3>All 27461 genes</h3>
-<div class="figure">
-<img src="batch_analysis_files/figure-html/unnamed-chunk-9-1.png" alt="For the same gene, we're looking at the log2FC of NSD.DKO compared to parental." width="100%" />
-<p class="caption">
-For the same gene, we’re looking at the log2FC of NSD.DKO compared to parental.
+<div id="nsd1ko.nsd2oe" class="section level1">
+<h1>NSD1KO.NSD2OE</h1>
+<b> One replicate for each of the condition compared to parental. </b>
+<p>
+ 
 </p>
+<p>Much lower gene expression changes in NSD1KO.NSD2OE than in NSD1KO.</p>
+<div id="comparison-of-log2fc" class="section level2">
+<h2>Comparison of log2FC</h2>
+<p><img src="fourth_page_files/figure-html/unnamed-chunk-14-1.png" width="100%" /></p>
 </div>
-</div>
-<div id="degs-only" class="section level3 tabset tabset-pills">
-<h3 class="tabset tabset-pills">DEGs only</h3>
-<div id="upregulated-1" class="section level4">
-<h4>Upregulated</h4>
-<p><img src="batch_analysis_files/figure-html/unnamed-chunk-10-1.png" width="100%" /><img src="batch_analysis_files/figure-html/unnamed-chunk-10-2.png" width="100%" /></p>
-</div>
-<div id="downregulated-1" class="section level4">
-<h4>Downregulated</h4>
-<p><img src="batch_analysis_files/figure-html/unnamed-chunk-11-1.png" width="100%" /><img src="batch_analysis_files/figure-html/unnamed-chunk-11-2.png" width="100%" /></p>
-</div>
-</div>
+<div id="scatterplot-2" class="section level2">
+<h2>Scatterplot</h2>
+<p>Fairly weak correlation in gene expression changes between NSD1KO and NSD1KO.NSD2OE.</p>
+<p><img src="fourth_page_files/figure-html/NSD2OE-1.png" width="100%" /></p>
 </div>
 </div>
 

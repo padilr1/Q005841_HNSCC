@@ -10,4 +10,6 @@ navbar:
       href: second_page.html
     - text: "DGE Analysis: Part 2"
       href: third_page.html
+    - text: "DGE Analysis: Part 3"
+      href: fourth_page.html
 output_dir: "docs"

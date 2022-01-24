@@ -412,6 +412,12 @@ get_dfs_with_overlapping_genes<- function(type,rd1,rd2,ttl1,ttl2){
 
 # Cal27 ssGSEA
 
+For NSD1KO, P53 pathway is also upregulated. It should also be upregulated for NSD.DKO, but it is not.
+<p>&nbsp;</p>
+For all conditions, Kras signaling down should be upregulated while Kras signaling up should be downregulated.
+<p>&nbsp;</p>
+In summary, still unclear while ssGSEA differs from the differential gene expression GSEA.
+
 ```{r include=FALSE}
 #To avoid computing strict overlaps, we can compare things at a pathway level by computing ssGSEA scores for some previously enriched pathways, such as those related to metabolism or neurogenesis. The only consistent trend for the two pathways checked appears to be the inactivation of oxidative phosphorylation (Warburg effect?) upon the ablation of NSD1 or both NSD1 and NSD2, but not when K27M-KO is already removed, though this could also be a batch effect.
 ps <- msigdbr(species = "Homo sapiens") %>%
@@ -478,6 +484,8 @@ r %>% as.data.frame() %>%
 
 # Detroit ssGSEA
 
+For NSD1KO, 2 samples are upregulated for oxidative phosphrylation while 1 sample is downregulated. The two samples with upregulated NSD1KO also have upregulated P53 pathway. It's still unclear what to make of the results. 
+
 ```{r include=FALSE}
 #To avoid computing strict overlaps, we can compare things at a pathway level by computing ssGSEA scores for some previously enriched pathways, such as those related to metabolism or neurogenesis. The only consistent trend for the two pathways checked appears to be the inactivation of oxidative phosphorylation (Warburg effect?) upon the ablation of NSD1 or both NSD1 and NSD2, but not when K27M-KO is already removed, though this could also be a batch effect.
 load("~/Documents/Q005841_HNSCC/data/dds_detroit_newbatchOnly.RData")
@@ -517,7 +525,7 @@ r %>% as.data.frame() %>%
 
 # NSD1KO v NSD2KO: same # of reps
 
-<b> Analysis of overlapping genes between NSD1KO v parental & NSD2KO v parental. 2 reps per condition, including the parental (old and new batch parentals combined). </b>
+<b> Analysis of overlapping genes between NSD1KO v parental & NSD2KO v parental. 2 reps per condition, including the parental (old and new batch parentals combined). We observe similar results as when we had 3 replicates for NSD2KO. </b>
 
 ## All genes
 
@@ -822,7 +830,7 @@ plot_grid(p_up_final,p_down_final,ncol = 1)
 
 ## Scatterplot
 
-Fairly weak correlation in gene expression changes between NSD1KO and NSD1KO.NSD2OE.
+Fairly weak correlation in gene expression changes between NSD1KO and NSD1KO.NSD2OE. The correlation between NSD1KO replicates was expected to be much higher. 
 
 ```{r NSD2OE, echo = FALSE, warning=FALSE,message=FALSE,out.width='100%'}
 #format dataType_cellline_cond1_v_cond2
@@ -835,5 +843,21 @@ nsd1ko_r1_r2 <- get_intersect_sctr_plt("all",rd_cal27_nsd1koR1_v_par,rd_cal27_ns
 #arrange into 3-grid plot
 ggarrange(nsd2oe_nsd1koR1_sctr_plt$p,nsd2oe_nsd1koR2_sctr_plt$p,nsd1ko_r1_r2$p)
 ```
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
 
+# Overall conclusions
+
+* NSD1KO has large effect on transcriptome
+* NSD2KO has considerably smaller effect
+* NSD.DKO behaves similar to NSD1KO
+* NSD.TKO behaves differently to the other conditions
+* NSD2OE seems to rescue NSD1KO 
+
+# Future Directions 
+
+* Get more replicates of NSD2OE in Cal27 and in other cell lines. Might be a good idea to also increase the number of parental replicates.
+* Reproduce comparison of NSD1KO v NSD2KO in other cell lines to confirm that NSD1KO does indeed have a greater effect on the transcriptome than NSD2KO. Suggest having at least 2 replicates for parental.
+* What happens if we do a double knockout of NSD2 and NSD3 only? Do we observe similar changes in the transcriptome to NSD2KO? How about NSD1 and NSD3 double knockout?
 

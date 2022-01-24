@@ -356,15 +356,25 @@ div.tocify {
 
 <div id="cal27-ssgsea" class="section level1">
 <h1>Cal27 ssGSEA</h1>
+For NSD1KO, P53 pathway is also upregulated. It should also be upregulated for NSD.DKO, but it is not.
+<p>
+ 
+</p>
+For all conditions, Kras signaling down should be upregulated while Kras signaling up should be downregulated.
+<p>
+ 
+</p>
+<p>In summary, still unclear while ssGSEA differs from the differential gene expression GSEA.</p>
 <p><img src="fourth_page_files/figure-html/unnamed-chunk-3-1.svg" width="100%" /></p>
 </div>
 <div id="detroit-ssgsea" class="section level1">
 <h1>Detroit ssGSEA</h1>
+<p>For NSD1KO, 2 samples are upregulated for oxidative phosphrylation while 1 sample is downregulated. The two samples with upregulated NSD1KO also have upregulated P53 pathway. It’s still unclear what to make of the results.</p>
 <p><img src="fourth_page_files/figure-html/unnamed-chunk-5-1.svg" width="100%" /></p>
 </div>
 <div id="nsd1ko-v-nsd2ko-same-of-reps" class="section level1">
 <h1>NSD1KO v NSD2KO: same # of reps</h1>
-<p><b> Analysis of overlapping genes between NSD1KO v parental &amp; NSD2KO v parental. 2 reps per condition, including the parental (old and new batch parentals combined). </b></p>
+<p><b> Analysis of overlapping genes between NSD1KO v parental &amp; NSD2KO v parental. 2 reps per condition, including the parental (old and new batch parentals combined). We observe similar results as when we had 3 replicates for NSD2KO. </b></p>
 <div id="all-genes" class="section level2">
 <h2>All genes</h2>
 <p>When looking at all genes, we observe low correlation in gene expression changes.</p>
@@ -440,9 +450,27 @@ Question: which condition (NSD1KO or NSD2KO) results in greater gene expression 
 </div>
 <div id="scatterplot-2" class="section level2">
 <h2>Scatterplot</h2>
-<p>Fairly weak correlation in gene expression changes between NSD1KO and NSD1KO.NSD2OE.</p>
+<p>Fairly weak correlation in gene expression changes between NSD1KO and NSD1KO.NSD2OE. The correlation between NSD1KO replicates was expected to be much higher.</p>
 <p><img src="fourth_page_files/figure-html/NSD2OE-1.png" width="100%" /></p>
 </div>
+</div>
+<div id="overall-conclusions" class="section level1">
+<h1>Overall conclusions</h1>
+<ul>
+<li>NSD1KO has large effect on transcriptome</li>
+<li>NSD2KO has considerably smaller effect</li>
+<li>NSD.DKO behaves similar to NSD1KO</li>
+<li>NSD.TKO behaves differently to the other conditions</li>
+<li>NSD2OE seems to rescue NSD1KO</li>
+</ul>
+</div>
+<div id="future-directions" class="section level1">
+<h1>Future Directions</h1>
+<ul>
+<li>Get more replicates of NSD2OE in Cal27 and in other cell lines. Might be a good idea to also increase the number of parental replicates.</li>
+<li>Reproduce comparison of NSD1KO v NSD2KO in other cell lines to confirm that NSD1KO does indeed have a greater effect on the transcriptome than NSD2KO. Suggest having at least 2 replicates for parental.</li>
+<li>What happens if we do a double knockout of NSD2 and NSD3 only? Do we observe similar changes in the transcriptome to NSD2KO? How about NSD1 and NSD3 double knockout?</li>
+</ul>
 </div>
 
 
